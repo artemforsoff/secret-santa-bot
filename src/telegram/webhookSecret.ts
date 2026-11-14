@@ -1,4 +1,4 @@
 import { createHash } from "node:crypto";
 
-/** Секрет вебхука выводится из токена бота, чтобы не хранить второй секрет. */
+/** The webhook secret is derived from the bot token so there is no second secret to store. */
 export const webhookSecret = (token: string) => createHash("sha256").update(token).digest("hex");

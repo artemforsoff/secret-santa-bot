@@ -1,6 +1,6 @@
 /**
- * Данные инлайн-кнопок организатора. Формат: "<код>:<chatId>[:<аргументы>]".
- * Коды менять нельзя: кнопки в уже отправленных сообщениях должны продолжать работать.
+ * Callback data of the organizer's inline buttons. Format: "<code>:<chatId>[:<args>]".
+ * The codes must not change: buttons in already sent messages have to keep working.
  */
 export type Callback =
   | { action: "pickFirst"; chatId: number; page: number }

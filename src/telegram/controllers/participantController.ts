@@ -5,11 +5,11 @@ import { parseJoinPayload } from "../views/card.js";
 import { HTML, fullName } from "../views/format.js";
 import { messages } from "../views/messages.js";
 
-/** Личка участника: запись в игру и свой результат. */
+/** The participant's private chat: joining a game and seeing their result. */
 export function registerParticipantController(bot: Bot, service: GameService): void {
   const pm = bot.chatType("private");
 
-  // /start приходит либо сам по себе, либо по кнопке «Участвую» с id беседы.
+  // /start arrives either on its own or from the join button with the group id.
   pm.command("start", async (ctx) => {
     const chatId = parseJoinPayload(ctx.match);
     if (chatId === undefined) return ctx.reply(messages.help);

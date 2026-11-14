@@ -6,13 +6,13 @@ import { cardKeyboard, cardText, openBotKeyboard } from "../views/card.js";
 import { HTML, fullName } from "../views/format.js";
 import { messages } from "../views/messages.js";
 
-/** Команды в беседе: запуск игры и показ списка участников. */
+/** Group commands: starting a game and showing the participant list. */
 export function registerGroupController(bot: Bot, service: GameService): void {
   const group = bot.chatType(["group", "supergroup"]);
 
   /**
-   * Выкладывает в беседу новую карточку со списком. Прежние карточки не бросаем:
-   * бот помнит их все и обновляет вместе с новой.
+   * Posts a new card with the list to the group. Earlier cards are not abandoned:
+   * the bot remembers all of them and refreshes them together with the new one.
    */
   const postCard = async (ctx: Context, game: Game, participants: Participant[]) => {
     await refreshCard(ctx.api, ctx.me.username, service, game.chatId);
@@ -42,14 +42,14 @@ export function registerGroupController(bot: Bot, service: GameService): void {
     await postCard(ctx, result.game, result.participants);
   });
 
-  // Список участников может запросить любой участник беседы.
+  // Any group member can request the participant list.
   group.command("list", async (ctx) => {
     const data = await service.getGameWithParticipants(ctx.chat.id);
     if (!data) return ctx.reply(messages.noGameInChat);
     await postCard(ctx, data.game, data.participants);
   });
 
-  // Команды организатора и участника работают только в личке.
+  // Organizer and participant commands only work in the private chat.
   group.command(["pair", "pairs", "remove", "draw", "me", "wishlist"], (ctx) =>
     ctx.reply(messages.privateOnly, { reply_markup: openBotKeyboard(ctx.me.username) }),
   );

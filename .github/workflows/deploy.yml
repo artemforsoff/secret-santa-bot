@@ -10,7 +10,7 @@ concurrency:
 
 permissions:
   contents: read
-  id-token: write # вход в GCP без ключей, через Workload Identity Federation
+  id-token: write # keyless sign-in to GCP via Workload Identity Federation
 
 env:
   REGION: europe-west1
@@ -44,6 +44,6 @@ jobs:
           docker build -t "$IMAGE" .
           docker push "$IMAGE"
 
-      # Меняется только образ: сервисный аккаунт, секрет с токеном и лимиты остаются как настроены.
+      # Only the image changes: the service account, the token secret and the limits stay as configured.
       - name: Deploy to Cloud Run
         run: gcloud run deploy "$SERVICE" --image "$IMAGE" --region "$REGION" --project "${{ vars.GCP_PROJECT_ID }}" --quiet

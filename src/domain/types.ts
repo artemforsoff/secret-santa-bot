@@ -3,22 +3,22 @@ export interface Game {
   title: string;
   ownerId: number;
   ownerName: string;
-  /** Последнее сообщение-карточка со списком участников в беседе. */
+  /** The latest card message with the participant list in the group. */
   messageId: number | null;
   /**
-   * Все карточки текущей игры: каждый /santa и /list выкладывает новую, и обновлять нужно все,
-   * иначе старое (например, закреплённое) сообщение устаревает. В играх, начатых до появления
-   * этого поля, его нет — тогда карточка одна, messageId.
+   * All cards of the current game: every /santa and /list posts a new one, and all of them must be
+   * refreshed, otherwise an older (e.g. pinned) message goes stale. Games started before this field
+   * existed do not have it; then the only card is messageId.
    */
   messageIds?: number[];
   drawn: boolean;
 }
 
-/** Данные человека, общие для всех его игр. */
+/** Per-user data shared across all of the user's games. */
 export interface UserProfile {
-  /** Что человек хотел бы получить; видит только его Тайный Санта. */
+  /** What the user would like to get; only their Secret Santa sees it. */
   wishlist: string | null;
-  /** Когда человек вызвал /wishlist и бот ждёт от него текст; null, если не ждёт. */
+  /** When the user ran /wishlist and the bot started waiting for the text; null if not waiting. */
   wishlistPendingAt: number | null;
 }
 
@@ -26,9 +26,9 @@ export interface Participant {
   userId: number;
   name: string;
   username: string | null;
-  /** Пара участника: им нельзя выпасть друг другу. */
+  /** The participant's partner: the two must not be drawn for each other. */
   partnerId: number | null;
-  /** Кому участник дарит подарок; заполняется жеребьёвкой. */
+  /** Who the participant gives a gift to; set by the draw. */
   recipientId: number | null;
   joinedAt: number;
 }

@@ -1,5 +1,5 @@
-// Сквозной сценарий через контроллеры: апдейты Telegram подаются напрямую,
-// вызовы Bot API перехватываются, данные лежат в памяти.
+// End-to-end scenarios through the controllers: Telegram updates are fed in directly,
+// Bot API calls are intercepted, data lives in memory.
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import type { Update, UserFromGetMe } from "grammy/types";
@@ -47,7 +47,7 @@ function setup() {
   const inGroup = (from: number, text: string) => command(GROUP, from, text);
   const inPrivate = (from: number, text: string) =>
     command({ id: from, type: "private", first_name: `User${from}` }, from, text);
-  /** Обычное сообщение в личке, не команда. */
+  /** A plain private message, not a command. */
   const say = (from: number, text: string) =>
     bot.handleUpdate({
       update_id: ++updateId,
@@ -71,7 +71,7 @@ function setup() {
       },
     } as Update);
 
-  /** Вызовы Bot API, сделанные во время действия. */
+  /** Bot API calls made during the action. */
   const during = async (action: () => Promise<unknown>): Promise<Call[]> => {
     const from = calls.length;
     await action();
@@ -83,16 +83,16 @@ function setup() {
   return { inGroup, inPrivate, say, press, during, buttons };
 }
 
-test("полный сценарий: игра, запись, пары, жеребьёвка, /me", async () => {
+test("full scenario: game, joining, pairs, draw, /me", async () => {
   const { inGroup, inPrivate, press, during, buttons } = setup();
 
-  // /santa в беседе: карточка с кнопкой-ссылкой для записи
+  // /santa in the group: a card with a join link button
   const [card] = await during(() => inGroup(1, "/santa"));
   assert.equal(card.method, "sendMessage");
   assert.equal(card.payload.chat_id, GROUP.id);
   assert.deepEqual(buttons(card), ["https://t.me/santa_bot?start=j-100"]);
 
-  // запись: ответ в личку и обновление карточки в беседе
+  // joining: a private reply and a refreshed card in the group
   for (const id of [1, 2, 3, 4]) {
     const [reply, edit] = await during(() => inPrivate(id, "/start j-100"));
     assert.match(reply.payload.text, new RegExp(`Привет, User${id}! Ты участвуешь`));
@@ -103,14 +103,14 @@ test("полный сценарий: игра, запись, пары, жере�
   const [again] = await during(() => inPrivate(2, "/start j-100"));
   assert.match(again.payload.text, /уже участвуешь/);
 
-  // чужой не управляет игрой
+  // a non-organizer cannot manage the game
   const [denied] = await during(() => press(2, "g:-100"));
   assert.equal(denied.method, "answerCallbackQuery");
   assert.equal(denied.payload.text, "Это не твоя игра.");
   const [noGames] = await during(() => inPrivate(2, "/draw"));
   assert.match(noGames.payload.text, /нет активных игр/);
 
-  // пара 1 + 2 через кнопки
+  // pair 1 + 2 via buttons
   const [pickFirst] = await during(() => inPrivate(1, "/pair"));
   assert.deepEqual(buttons(pickFirst), ["b:-100:1:0", "b:-100:2:0", "b:-100:3:0", "b:-100:4:0"]);
   const pickSecond = (await during(() => press(1, "b:-100:1:0"))).at(-1)!;
@@ -119,7 +119,7 @@ test("полный сценарий: игра, запись, пары, жере�
   assert.match(saved.payload.text, /Пара сохранена/);
   assert.match(saved.payload.text, /1\. User1 \+ User2/);
 
-  // вторая пара, затем её удаление; кнопки старого формата без номера страницы работают
+  // a second pair, then its removal; old-format buttons without a page number still work
   await press(1, "s:-100:3:4");
   const removed = (await during(() => press(1, "d:-100:3"))).at(-1)!;
   assert.match(removed.payload.text, /Пара удалена/);
@@ -127,7 +127,7 @@ test("полный сценарий: игра, запись, пары, жере�
   const oldFormat = (await during(() => press(1, "a:-100"))).at(-1)!;
   assert.deepEqual(buttons(oldFormat), ["b:-100:3:0", "b:-100:4:0"]);
 
-  // жеребьёвка
+  // the draw
   const [confirm] = await during(() => inPrivate(1, "/draw"));
   assert.match(confirm.payload.text, /Участников: 4\nПар: 1/);
   assert.deepEqual(buttons(confirm), ["g:-100"]);
@@ -137,7 +137,7 @@ test("полный сценарий: игра, запись, пары, жере�
   assert.deepEqual(results.map((c) => c.payload.chat_id).sort(), [1, 2, 3, 4]);
   for (const r of results) assert.match(r.payload.text, /Ты даришь подарок: <tg-spoiler>User\d<\/tg-spoiler>/);
   const toUser1 = results.find((c) => c.payload.chat_id === 1)!.payload.text as string;
-  assert.doesNotMatch(toUser1, /User[12]</, "не себе и не своей паре");
+  assert.doesNotMatch(toUser1, /User[12]</, "neither themselves nor their partner");
   assert.ok(drawCalls.some((c) => c.method === "editMessageText" && /участников: 4/.test(c.payload.text)));
   assert.ok(
     drawCalls.some(
@@ -146,10 +146,10 @@ test("полный сценарий: игра, запись, пары, жере�
   );
   assert.ok(
     drawCalls.some((c) => c.method === "sendMessage" && c.payload.chat_id === GROUP.id),
-    "объявление в беседе",
+    "announcement in the group",
   );
 
-  // после жеребьёвки: /me повторяет результат, запись и управление закрыты
+  // after the draw: /me repeats the result, joining and managing are closed
   const [me] = await during(() => inPrivate(1, "/me"));
   assert.equal(me.payload.text, toUser1);
   const [closed] = await during(() => inPrivate(5, "/start j-100"));
@@ -158,7 +158,7 @@ test("полный сценарий: игра, запись, пары, жере�
   assert.match(second.payload.text, /уже проведена/);
 });
 
-test("организатор убирает участника через /remove", async () => {
+test("the organizer removes a participant via /remove", async () => {
   const { inGroup, inPrivate, press, during, buttons } = setup();
   await inGroup(1, "/santa");
   for (const id of [1, 2, 3, 4]) await inPrivate(id, "/start j-100");
@@ -172,7 +172,7 @@ test("организатор убирает участника через /remov
   assert.match(confirm.payload.text, /Пара с этим участником будет расформирована/);
   assert.deepEqual(buttons(confirm), ["x:-100:2", "r:-100:0"]);
 
-  // чужой нажать кнопку не может
+  // a non-organizer cannot press the button
   const [denied] = await during(() => press(3, "x:-100:2"));
   assert.equal(denied.payload.text, "Это не твоя игра.");
 
@@ -187,23 +187,23 @@ test("организатор убирает участника через /remov
   assert.equal(notice.payload.chat_id, 2);
   assert.match(notice.payload.text, /убрал тебя/);
 
-  // пара убранного расформирована, сам он может записаться заново
+  // the removed person's pair is dissolved, and they can join again
   const pairs = (await during(() => press(1, "l:-100"))).at(-1)!;
   assert.match(pairs.payload.text, /Пар пока нет/);
   const [rejoin] = await during(() => inPrivate(2, "/start j-100"));
   assert.match(rejoin.payload.text, /Ты участвуешь/);
 });
 
-test("повторный /santa и /list: обновляются все карточки, а не только последняя", async () => {
+test("repeated /santa and /list: every card is refreshed, not only the latest", async () => {
   const { inGroup, inPrivate, press, during, buttons } = setup();
   const [empty] = await during(() => inGroup(2, "/list"));
   assert.match(empty.payload.text, /игра ещё не запущена/);
 
-  await inGroup(1, "/santa"); // карточка 1
+  await inGroup(1, "/santa"); // card 1
   await inPrivate(1, "/start j-100");
-  await inGroup(1, "/santa"); // карточка 2, игра та же
+  await inGroup(1, "/santa"); // card 2, same game
 
-  // /list доступен любому участнику беседы и выкладывает карточку 3
+  // /list is available to any group member and posts card 3
   const listCalls = await during(() => inGroup(2, "/list"));
   const posted = listCalls.at(-1)!;
   assert.equal(posted.method, "sendMessage");
@@ -216,7 +216,7 @@ test("повторный /santa и /list: обновляются все карт
       .map((c) => c.payload.message_id)
       .sort((a, b) => a - b);
 
-  // запись нового участника обновляет все три карточки
+  // a new participant joining refreshes all three cards
   const joinCalls = await during(() => inPrivate(2, "/start j-100"));
   const cards = editedCards(joinCalls);
   assert.equal(cards.length, 3);
@@ -225,48 +225,48 @@ test("повторный /santa и /list: обновляются все карт
     assert.match(c.payload.text, /Участвуют \(2\)/);
   }
 
-  // удаление участника тоже
+  // so does removing a participant
   await inPrivate(3, "/start j-100");
   const removeCalls = await during(() => press(1, "x:-100:3"));
   assert.deepEqual(editedCards(removeCalls), cards);
 });
 
-test("вишлист: написать, обновить, Санта видит его в рассылке и в /me", async () => {
+test("wishlist: write, update, the Santa sees it in the draw message and in /me", async () => {
   const { inGroup, inPrivate, say, press, during } = setup();
 
-  // обычное сообщение без /wishlist бот не трогает
+  // a plain message without /wishlist is ignored
   assert.deepEqual(await during(() => say(2, "просто текст")), []);
 
-  // /wishlist → бот ждёт текст → следующее сообщение сохраняется
+  // /wishlist → the bot waits for text → the next message is saved
   const [prompt] = await during(() => inPrivate(2, "/wishlist"));
   assert.match(prompt.payload.text, /Напиши одним сообщением/);
   const [saved] = await during(() => say(2, "Носки <тёплые> & чай"));
   assert.match(saved.payload.text, /Вишлист сохранён/);
   assert.match(saved.payload.text, /<blockquote>Носки &lt;тёплые&gt; &amp; чай<\/blockquote>/);
-  // после сохранения бот больше не ждёт текст
+  // after saving, the bot no longer waits for text
   assert.deepEqual(await during(() => say(2, "ещё текст")), []);
 
-  // повторный /wishlist показывает текущий и заменяет его
+  // a repeated /wishlist shows the current one and replaces it
   const [again] = await during(() => inPrivate(2, "/wishlist"));
   assert.match(again.payload.text, /Твой вишлист сейчас:\n<blockquote>Носки/);
-  // команда во время ожидания не сохраняется как вишлист
+  // a command sent while waiting is not saved as the wishlist
   const [me] = await during(() => inPrivate(2, "/me"));
   assert.match(me.payload.text, /не участвуешь/);
   const [replaced] = await during(() => say(2, "Книга"));
   assert.match(replaced.payload.text, /<blockquote>Книга<\/blockquote>/);
 
-  // слишком длинный текст отклоняется, ожидание сохраняется
+  // text that is too long is rejected and the bot keeps waiting
   await inPrivate(3, "/wishlist");
   const [tooLong] = await during(() => say(3, "я".repeat(1001)));
   assert.match(tooLong.payload.text, /максимум 1000 символов/);
   const [ok] = await during(() => say(3, "Плед"));
   assert.match(ok.payload.text, /<blockquote>Плед<\/blockquote>/);
 
-  // /wishlist с текстом сохраняет сразу
+  // /wishlist with text saves right away
   const [inline] = await during(() => inPrivate(1, "/wishlist Кофе"));
   assert.match(inline.payload.text, /<blockquote>Кофе<\/blockquote>/);
 
-  // жеребьёвка: каждому приходит вишлист его получателя
+  // the draw: everyone receives their recipient's wishlist
   await inGroup(1, "/santa");
   for (const id of [1, 2, 3, 4]) await inPrivate(id, "/start j-100");
   const wishes: Record<string, string> = { User1: "Кофе", User2: "Книга", User3: "Плед" };
@@ -280,14 +280,14 @@ test("вишлист: написать, обновить, Санта видит 
     else assert.match(r.payload.text, /Вишлиста пока нет/);
   }
 
-  // получатель обновил вишлист после жеребьёвки — Санта видит новый в /me
+  // the recipient updated the wishlist after the draw: their Santa sees the new one in /me
   const santaOf4 = results.find((r) => recipientOf(r.payload.text) === "User4")!.payload.chat_id;
   await inPrivate(4, "/wishlist Наушники");
   const [after] = await during(() => inPrivate(santaOf4, "/me"));
   assert.match(after.payload.text, /<tg-spoiler>User4<\/tg-spoiler>\n\n🎁 Вишлист:\n<blockquote>Наушники<\/blockquote>/);
 });
 
-test("/start без параметра и команды организатора в беседе", async () => {
+test("/start without a parameter and organizer commands in the group", async () => {
   const { inGroup, inPrivate, during } = setup();
   const [help] = await during(() => inPrivate(1, "/start"));
   assert.match(help.payload.text, /бот для Тайного Санты/);

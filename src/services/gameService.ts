@@ -5,10 +5,10 @@ import type { GameRepository } from "../repositories/gameRepository.js";
 export const MIN_PARTICIPANTS = 3;
 const MAX_CARDS = 10;
 export const MAX_WISHLIST_LENGTH = 1000;
-/** Сколько бот ждёт текст вишлиста после /wishlist. */
+/** How long the bot waits for the wishlist text after /wishlist. */
 const WISHLIST_PENDING_TTL_MS = 10 * 60 * 1000;
 
-/** Все сообщения-карточки игры в беседе, от старых к новым. */
+/** All card messages of the game in the group, oldest first. */
 export function cardMessageIds(game: Game): number[] {
   return game.messageIds ?? (game.messageId ? [game.messageId] : []);
 }
@@ -18,15 +18,15 @@ export interface StartGameInput {
   title: string;
   userId: number;
   userName: string;
-  /** Вызывается, только если нужно решить, может ли не-организатор начать новую игру. */
+  /** Called only when deciding whether a non-organizer may start a new game. */
   isChatAdmin: () => Promise<boolean>;
 }
 
 export type StartGameResult =
   | { status: "ok"; game: Game; participants: Participant[] }
-  /** Идёт игра другого организатора. */
+  /** Another organizer's game is in progress. */
   | { status: "owned_by_other"; game: Game }
-  /** Прошлая игра завершена, но начать новую может только её организатор или админ беседы. */
+  /** The previous game is over, but only its organizer or a chat admin may start a new one. */
   | { status: "not_allowed" };
 
 export type JoinResult =
@@ -51,7 +51,7 @@ export interface DrawSummary {
 export interface Assignment {
   giver: Participant;
   recipient: Participant;
-  /** Вишлист получателя на момент жеребьёвки. */
+  /** The recipient's wishlist at the time of the draw. */
   wishlist: string | null;
 }
 
@@ -69,24 +69,24 @@ export type DrawResult =
 
 export interface MyResult {
   game: Game;
-  /** undefined, пока жеребьёвка не проведена. */
+  /** undefined until the draw has happened. */
   recipient: Participant | undefined;
-  /** Актуальный вишлист получателя. */
+  /** The recipient's current wishlist. */
   wishlist: string | null;
 }
 
-/** Правила игры. Ничего не знает про Telegram и про то, где лежат данные. */
+/** Game rules. Knows nothing about Telegram or where the data is stored. */
 export class GameService {
   constructor(
     private readonly repo: GameRepository,
     private readonly now: () => number = Date.now,
   ) {}
 
-  // ---------- игра в беседе ----------
+  // ---------- game in a group ----------
 
   /**
-   * /santa: начинает новую игру или возвращает текущую.
-   * Тот, кто начал игру, становится организатором.
+   * /santa: starts a new game or returns the current one.
+   * Whoever starts the game becomes its organizer.
    */
   async startGame(input: StartGameInput): Promise<StartGameResult> {
     let game = await this.repo.getGame(input.chatId);
@@ -109,7 +109,7 @@ export class GameService {
     return { status: "ok", game, participants: await this.repo.getParticipants(input.chatId) };
   }
 
-  /** Запоминает новую карточку игры; помним последние MAX_CARDS. */
+  /** Remembers a new game card; the last MAX_CARDS are kept. */
   async addCardMessage(chatId: number, messageId: number): Promise<void> {
     await this.repo.transaction(async (tx) => {
       const game = await tx.getGame(chatId);
@@ -127,7 +127,7 @@ export class GameService {
     return { game, participants: await this.repo.getParticipants(chatId) };
   }
 
-  // ---------- участник ----------
+  // ---------- participant ----------
 
   async join(
     chatId: number,
@@ -143,7 +143,7 @@ export class GameService {
     });
   }
 
-  /** /me: все игры участника и кому он дарит в каждой. */
+  /** /me: all of the participant's games and who they give to in each. */
   async myResults(userId: number): Promise<MyResult[]> {
     const results: MyResult[] = [];
     for (const chatId of await this.repo.findGameIdsByUser(userId)) {
@@ -160,21 +160,21 @@ export class GameService {
     return results;
   }
 
-  // ---------- вишлист ----------
-  // Вишлист один на человека и общий для всех его игр. Видит его только Тайный Санта.
+  // ---------- wishlist ----------
+  // One wishlist per user, shared across all their games. Only their Secret Santa sees it.
 
   async getWishlist(userId: number): Promise<string | null> {
     return (await this.repo.getUserProfile(userId)).wishlist;
   }
 
-  /** /wishlist без текста: бот начинает ждать следующее сообщение. Возвращает текущий вишлист. */
+  /** /wishlist without text: the bot starts waiting for the next message. Returns the current wishlist. */
   async startWishlistEdit(userId: number): Promise<string | null> {
     const { wishlist } = await this.repo.getUserProfile(userId);
     await this.repo.updateUserProfile(userId, { wishlistPendingAt: this.now() });
     return wishlist;
   }
 
-  /** Сохраняет вишлист, заменяя прежний. */
+  /** Saves the wishlist, replacing the previous one. */
   async saveWishlist(userId: number, text: string): Promise<SaveWishlistResult> {
     const wishlist = text.trim();
     if (wishlist.length > MAX_WISHLIST_LENGTH) return { status: "too_long", max: MAX_WISHLIST_LENGTH };
@@ -182,7 +182,7 @@ export class GameService {
     return { status: "saved", wishlist };
   }
 
-  /** Обычное сообщение в личке: сохраняется как вишлист, только если бот его ждёт. */
+  /** A plain private message: saved as the wishlist only if the bot is waiting for it. */
   async submitPendingWishlist(userId: number, text: string): Promise<SubmitWishlistResult> {
     const { wishlistPendingAt } = await this.repo.getUserProfile(userId);
     if (!wishlistPendingAt || this.now() - wishlistPendingAt > WISHLIST_PENDING_TTL_MS) {
@@ -191,13 +191,13 @@ export class GameService {
     return this.saveWishlist(userId, text);
   }
 
-  // ---------- организатор ----------
+  // ---------- organizer ----------
 
   organizerGames(userId: number): Promise<Game[]> {
     return this.repo.findActiveGamesByOwner(userId);
   }
 
-  /** Управлять игрой может только организатор и только до жеребьёвки. */
+  /** Only the organizer can manage the game, and only before the draw. */
   async organizerAccess(chatId: number, userId: number): Promise<OrganizerAccess> {
     const game = await this.repo.getGame(chatId);
     if (!game || game.ownerId !== userId) return { status: "forbidden" };
@@ -209,8 +209,8 @@ export class GameService {
   }
 
   /**
-   * Убирает участника из игры до жеребьёвки; его пара, если была, расформировывается.
-   * Возвращает убранного участника или undefined, если убирать некого или игра уже разыграна.
+   * Removes a participant before the draw; their pair, if any, is dissolved.
+   * Returns the removed participant, or undefined if there is nobody to remove or the draw already happened.
    */
   async removeParticipant(chatId: number, userId: number): Promise<Participant | undefined> {
     return this.repo.transaction(async (tx) => {
@@ -226,12 +226,12 @@ export class GameService {
     });
   }
 
-  /** Участники, у которых ещё нет пары. */
+  /** Participants who are not in a pair yet. */
   async freeParticipants(chatId: number): Promise<Participant[]> {
     return (await this.repo.getParticipants(chatId)).filter((p) => !p.partnerId);
   }
 
-  /** Кандидаты в пару для участника; undefined, если он не найден или уже в паре. */
+  /** Partner candidates for a participant; undefined if they are missing or already paired. */
   async pairCandidates(
     chatId: number,
     firstId: number,
@@ -253,7 +253,7 @@ export class GameService {
     return pairs;
   }
 
-  /** Возвращает false, если кто-то из двоих не участвует или уже в паре. */
+  /** Returns false if either of the two is not a participant or is already paired. */
   async addPair(chatId: number, firstId: number, secondId: number): Promise<boolean> {
     if (firstId === secondId) return false;
     return this.repo.transaction(async (tx) => {
@@ -286,7 +286,7 @@ export class GameService {
     };
   }
 
-  /** Жеребьёвка проводится ровно один раз: повторный вызов вернёт already_drawn. */
+  /** The draw happens exactly once: a repeated call returns already_drawn. */
   async draw(chatId: number): Promise<DrawResult> {
     const result = await this.drawInTransaction(chatId);
     if (result.status !== "ok") return result;

@@ -1,9 +1,9 @@
 import { randomInt } from "node:crypto";
 
 /**
- * Строит одно кольцо дарения: каждый дарит следующему по кругу.
- * Никто не дарит себе и своей паре, взаимных «я тебе, ты мне» не бывает.
- * Возвращает null, если участников меньше трёх или расклад невозможен.
+ * Builds a single gift cycle: everyone gives to the next person around the ring.
+ * Nobody gives to themselves or to their partner, and two people never give to each other.
+ * Returns null if there are fewer than three participants or no valid arrangement exists.
  */
 export function drawCycle(
   ids: number[],

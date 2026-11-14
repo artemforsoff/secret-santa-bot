@@ -2,7 +2,7 @@ import { InlineKeyboard } from "grammy";
 import type { Game, Participant } from "../../domain/types.js";
 import { esc } from "./format.js";
 
-/** Сообщение-карточка в беседе: список участников и кнопка «Участвую». */
+/** The card message in the group: the participant list and the join button. */
 export function cardText(game: Game, participants: Participant[]): string {
   const list = participants.length
     ? participants.map((p, i) => `${i + 1}. ${esc(p.name)}`).join("\n")
@@ -24,7 +24,7 @@ export function openBotKeyboard(botUsername: string): InlineKeyboard {
   return new InlineKeyboard().url("Открыть бота", `https://t.me/${botUsername}`);
 }
 
-/** Параметр ссылки t.me/бот?start=…, по которому участник записывается в игру беседы. */
+/** The t.me/<bot>?start=… link parameter that joins a participant to the group's game. */
 export const joinPayload = (chatId: number) => `j${chatId}`;
 
 export function parseJoinPayload(payload: string): number | undefined {

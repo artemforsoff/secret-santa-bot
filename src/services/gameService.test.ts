@@ -20,7 +20,7 @@ function setup() {
   return { service, start, join, joinMany };
 }
 
-test("кто начал игру, тот организатор", async () => {
+test("whoever starts the game is its organizer", async () => {
   const { service, start } = setup();
   const res = await start();
   assert.equal(res.status, "ok");
@@ -29,7 +29,7 @@ test("кто начал игру, тот организатор", async () => {
   assert.deepEqual((await service.organizerGames(OWNER)).map((g) => g.chatId), [CHAT]);
 });
 
-test("повторный /santa организатора не сбрасывает участников", async () => {
+test("a repeated /santa by the organizer keeps the participants", async () => {
   const { start, joinMany } = setup();
   await start();
   await joinMany(1, 2);
@@ -38,13 +38,13 @@ test("повторный /santa организатора не сбрасывае
   assert.equal(res.status === "ok" && res.participants.length, 2);
 });
 
-test("другой человек не может перехватить идущую игру", async () => {
+test("another user cannot take over a running game", async () => {
   const { start } = setup();
   await start();
   assert.equal((await start(2, admin)).status, "owned_by_other");
 });
 
-test("запись: новая, повторная, в несуществующую игру", async () => {
+test("joining: new, repeated, and into a missing game", async () => {
   const { service, start, join } = setup();
   assert.equal((await join(1)).status, "not_found");
   await start();
@@ -53,15 +53,15 @@ test("запись: новая, повторная, в несуществующ�
   assert.equal((await service.getGameWithParticipants(CHAT))!.participants.length, 1);
 });
 
-test("пары: добавление, отказ для занятых, удаление", async () => {
+test("pairs: adding, rejecting already paired people, removing", async () => {
   const { service, start, joinMany } = setup();
   await start();
   await joinMany(1, 2, 3, 4);
 
   assert.equal(await service.addPair(CHAT, 1, 2), true);
-  assert.equal(await service.addPair(CHAT, 1, 3), false, "первый уже в паре");
-  assert.equal(await service.addPair(CHAT, 3, 3), false, "пара с самим собой");
-  assert.equal(await service.addPair(CHAT, 3, 99), false, "не участник");
+  assert.equal(await service.addPair(CHAT, 1, 3), false, "the first one is already paired");
+  assert.equal(await service.addPair(CHAT, 3, 3), false, "a pair with oneself");
+  assert.equal(await service.addPair(CHAT, 3, 99), false, "not a participant");
 
   assert.deepEqual((await service.listPairs(CHAT)).map(([a, b]) => [a.userId, b.userId]), [[1, 2]]);
   assert.deepEqual((await service.freeParticipants(CHAT)).map((p) => p.userId), [3, 4]);
@@ -74,7 +74,7 @@ test("пары: добавление, отказ для занятых, удал
   assert.equal((await service.freeParticipants(CHAT)).length, 4);
 });
 
-test("карточки: помним все, старая игра с одним messageId дополняется", async () => {
+test("cards: all are remembered, a legacy game with a single messageId is extended", async () => {
   const { service, start } = setup();
   await start();
   assert.deepEqual(cardMessageIds((await service.getGameWithParticipants(CHAT))!.game), []);
@@ -84,7 +84,7 @@ test("карточки: помним все, старая игра с одним
   assert.equal(game.messageId, 20);
   assert.deepEqual(cardMessageIds(game), [10, 20]);
 
-  // игра, созданная до появления messageIds
+  // a game created before messageIds existed
   const repo = new InMemoryGameRepository();
   await repo.replaceGame({ chatId: CHAT, title: "t", ownerId: 1, ownerName: "o", messageId: 34, drawn: false });
   const legacy = new GameService(repo);
@@ -92,7 +92,7 @@ test("карточки: помним все, старая игра с одним
   assert.deepEqual(cardMessageIds((await repo.getGame(CHAT))!), [34, 82]);
 });
 
-test("вишлист: ожидание текста истекает через 10 минут", async () => {
+test("wishlist: waiting for the text expires after 10 minutes", async () => {
   let now = 1_000_000;
   const service = new GameService(new InMemoryGameRepository(), () => now);
 
@@ -109,7 +109,7 @@ test("вишлист: ожидание текста истекает через 
   assert.equal(await service.startWishlistEdit(1), "вовремя");
 });
 
-test("вишлист переживает удаление из игры и повторную запись", async () => {
+test("wishlist survives removal from a game and joining again", async () => {
   const { service, start, join, joinMany } = setup();
   await start();
   await joinMany(1, 2, 3);
@@ -119,7 +119,7 @@ test("вишлист переживает удаление из игры и по
   assert.equal(await service.getWishlist(2), "Книга");
 });
 
-test("удаление участника: пара расформировывается, можно записаться заново", async () => {
+test("removing a participant: the pair is dissolved and they can join again", async () => {
   const { service, start, join, joinMany } = setup();
   await start();
   await joinMany(1, 2, 3, 4);
@@ -132,11 +132,11 @@ test("удаление участника: пара расформировыва
   assert.deepEqual((await service.freeParticipants(CHAT)).map((p) => p.userId), [1, 3, 4]);
   assert.deepEqual(await service.myResults(2), []);
 
-  assert.equal(await service.removeParticipant(CHAT, 2), undefined, "уже убран");
+  assert.equal(await service.removeParticipant(CHAT, 2), undefined, "already removed");
   assert.equal((await join(2)).status, "joined");
 });
 
-test("удаление участника после жеребьёвки запрещено", async () => {
+test("removing a participant after the draw is not allowed", async () => {
   const { service, start, joinMany } = setup();
   await start();
   await joinMany(1, 2, 3);
@@ -145,23 +145,23 @@ test("удаление участника после жеребьёвки зап
   assert.equal((await service.participants(CHAT)).length, 3);
 });
 
-test("жеребьёвка: меньше трёх участников", async () => {
+test("draw: fewer than three participants", async () => {
   const { service, start, joinMany } = setup();
   await start();
   await joinMany(1, 2);
   assert.deepEqual(await service.draw(CHAT), { status: "failed", reason: "too_few" });
 });
 
-test("жеребьёвка: невозможный расклад ничего не меняет", async () => {
+test("draw: an impossible arrangement changes nothing", async () => {
   const { service, start, joinMany } = setup();
   await start();
   await joinMany(1, 2, 3);
   await service.addPair(CHAT, 1, 2);
   assert.deepEqual(await service.draw(CHAT), { status: "failed", reason: "impossible" });
-  assert.equal((await service.organizerAccess(CHAT, OWNER)).status, "ok", "игра не закрыта");
+  assert.equal((await service.organizerAccess(CHAT, OWNER)).status, "ok", "the game is not closed");
 });
 
-test("жеребьёвка: кольцо без себя и без своей пары, только один раз", async () => {
+test("draw: a cycle without self or partner, exactly once", async () => {
   const { service, start, join, joinMany } = setup();
   await start();
   await joinMany(1, 2, 3, 4, 5, 6);
@@ -178,16 +178,16 @@ test("жеребьёвка: кольцо без себя и без своей п
     assert.notEqual(giver.partnerId, recipient.userId);
     assert.notEqual(next.get(recipient.userId), giver.userId);
   }
-  assert.equal(new Set(next.values()).size, 6, "каждый получает ровно один подарок");
+  assert.equal(new Set(next.values()).size, 6, "everyone receives exactly one gift");
 
   assert.deepEqual(await service.draw(CHAT), { status: "failed", reason: "already_drawn" });
   assert.equal((await service.organizerAccess(CHAT, OWNER)).status, "drawn");
   assert.equal((await join(7)).status, "closed");
-  assert.equal(await service.addPair(CHAT, 5, 6), false, "пары после жеребьёвки не меняются");
+  assert.equal(await service.addPair(CHAT, 5, 6), false, "pairs cannot change after the draw");
   assert.deepEqual(await service.organizerGames(OWNER), []);
 });
 
-test("/me: до жеребьёвки пусто, после — свой получатель", async () => {
+test("/me: nothing before the draw, own recipient after it", async () => {
   const { service, start, joinMany } = setup();
   await start();
   await joinMany(1, 2, 3);
@@ -201,7 +201,7 @@ test("/me: до жеребьёвки пусто, после — свой пол�
   assert.equal((await service.myResults(1))[0].recipient?.userId, expected);
 });
 
-test("новая игра после жеребьёвки: организатор или админ, участники стираются", async () => {
+test("new game after the draw: organizer or admin only, participants are wiped", async () => {
   const { service, start, joinMany } = setup();
   await start();
   await joinMany(1, 2, 3);

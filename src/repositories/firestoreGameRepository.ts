@@ -3,7 +3,7 @@ import type { Game, Participant, UserProfile } from "../domain/types.js";
 import type { GameRepository, GameTransaction } from "./gameRepository.js";
 
 /**
- * Схема:
+ * Schema:
  *   games/{chatId}                        — Game
  *   games/{chatId}/participants/{userId}  — Participant
  *   users/{userId}                        — { games: chatId[], wishlist?, wishlistPendingAt? }

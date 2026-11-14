@@ -4,11 +4,11 @@ import { cardKeyboard, cardText } from "./views/card.js";
 import { HTML } from "./views/format.js";
 import type { Screen } from "./views/organizer.js";
 
-/** Telegram отвечает ошибкой, если отредактированное сообщение не изменилось. Это не сбой. */
+/** Telegram returns an error when an edited message did not change. That is not a failure. */
 const notModified = (e: unknown) =>
   e instanceof GrammyError && e.description.includes("not modified");
 
-/** Показывает экран: после нажатия кнопки меняет текущее сообщение, иначе отправляет новое. */
+/** Shows a screen: edits the current message after a button press, otherwise sends a new one. */
 export async function show(ctx: Context, screen: Screen): Promise<void> {
   const options = { ...HTML, reply_markup: screen.keyboard };
   if (!ctx.callbackQuery) {
@@ -23,8 +23,8 @@ export async function show(ctx: Context, screen: Screen): Promise<void> {
 }
 
 /**
- * Обновляет все карточки игры в беседе после изменения состава или жеребьёвки.
- * Карточек может быть несколько: каждый /santa и /list выкладывает новую.
+ * Refreshes every game card in the group after the roster changes or the draw happens.
+ * There can be several cards: every /santa and /list posts a new one.
  */
 export async function refreshCard(
   api: Api,
@@ -41,7 +41,7 @@ export async function refreshCard(
       try {
         await api.editMessageText(chatId, messageId, text, options);
       } catch (e) {
-        // Карточку могли удалить из беседы — остальные всё равно обновляем.
+        // The card may have been deleted from the group; the others are still refreshed.
         if (!notModified(e)) console.error(`refreshCard failed for message ${messageId}`, e);
       }
     }),

@@ -1,6 +1,6 @@
 import type { Participant } from "../../domain/types.js";
 
-/** Все сообщения бота отправляются в HTML-разметке. */
+/** All bot messages are sent with HTML markup. */
 export const HTML = { parse_mode: "HTML" as const };
 
 export const esc = (s: string) =>
@@ -9,5 +9,5 @@ export const esc = (s: string) =>
 export const fullName = (u: { first_name: string; last_name?: string }) =>
   [u.first_name, u.last_name].filter(Boolean).join(" ");
 
-/** Имя с юзернеймом: чтобы различать тёзок. */
+/** Name with username, to tell namesakes apart. */
 export const label = (p: Participant) => p.name + (p.username ? ` (@${p.username})` : "");

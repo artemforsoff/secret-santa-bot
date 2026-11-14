@@ -12,7 +12,7 @@ export const messages = {
     "Участнику:\n/wishlist — написать или обновить свой вишлист\n" +
     "/me — кому я дарю подарок и его вишлист",
 
-  // ----- беседа -----
+  // ----- group -----
   anonymousAdmin: "Запусти игру от своего имени, а не как анонимный админ.",
   gameOwnedBy: (game: Game) => `Игра уже запущена, организатор — ${esc(game.ownerName)}.`,
   restartNotAllowed: "Новую игру может начать организатор прошлой или админ беседы.",
@@ -21,7 +21,7 @@ export const messages = {
   drawAnnouncement:
     "🎁 Жеребьёвка Тайного Санты проведена! Загляните в личку с ботом, чтобы узнать, кому вы дарите подарок.",
 
-  // ----- участник -----
+  // ----- participant -----
   gameNotFound: "Эта игра не найдена. Попроси организатора написать /santa в беседе.",
   joinClosed: (game: Game) => `Жеребьёвка в «${esc(game.title)}» уже проведена, записаться нельзя.`,
   alreadyJoined: (firstName: string, game: Game) =>
@@ -36,7 +36,7 @@ export const messages = {
       ? `🎁 Вишлист:\n<blockquote>${esc(wishlist)}</blockquote>`
       : "Вишлиста пока нет. Загляни в /me позже — вдруг появится."),
 
-  // ----- вишлист -----
+  // ----- wishlist -----
   wishlistPrompt: (current: string | null) =>
     current
       ? `Твой вишлист сейчас:\n<blockquote>${esc(current)}</blockquote>\n\n` +
@@ -50,7 +50,7 @@ export const messages = {
   notDrawnYet: (game: Game) => `В «${esc(game.title)}» жеребьёвки ещё не было.`,
   noGames: "Ты пока не участвуешь ни в одной игре.",
 
-  // ----- организатор -----
+  // ----- organizer -----
   noActiveGames: "У тебя нет активных игр. Напиши /santa в беседе, чтобы начать.",
   chooseGame: "Для какой беседы?",
   notYourGame: "Это не твоя игра.",

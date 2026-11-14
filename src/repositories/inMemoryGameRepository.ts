@@ -1,7 +1,7 @@
 import type { Game, Participant, UserProfile } from "../domain/types.js";
 import type { GameRepository, GameTransaction } from "./gameRepository.js";
 
-/** Репозиторий в памяти: для тестов сервиса без Firestore. */
+/** In-memory repository: for testing the service without Firestore. */
 export class InMemoryGameRepository implements GameRepository {
   private readonly games = new Map<number, Game>();
   private readonly participants = new Map<number, Map<number, Participant>>();

@@ -4,11 +4,11 @@ import { HTML } from "../views/format.js";
 import { messages } from "../views/messages.js";
 
 /**
- * Личка: вишлист участника.
- * /wishlist <текст> сохраняет сразу; /wishlist без текста просит прислать его следующим сообщением.
+ * Private chat: the participant's wishlist.
+ * /wishlist <text> saves right away; /wishlist without text asks for it in the next message.
  *
- * Регистрируется последним: обработчик обычных сообщений не должен перехватывать команды
- * других контроллеров.
+ * Registered last: the plain-message handler must not intercept commands
+ * of other controllers.
  */
 export function registerWishlistController(bot: Bot, service: GameService): void {
   const pm = bot.chatType("private");
@@ -28,7 +28,7 @@ export function registerWishlistController(bot: Bot, service: GameService): void
     await ctx.reply(messages.wishlistPrompt(current), HTML);
   });
 
-  // Обычное сообщение — это вишлист, только если человек перед этим вызвал /wishlist.
+  // A plain message is a wishlist only if the user ran /wishlist just before.
   pm.on("message:text", async (ctx, next) => {
     if (ctx.message.text.startsWith("/")) return next();
     const result = await service.submitPendingWishlist(ctx.from.id, ctx.message.text);

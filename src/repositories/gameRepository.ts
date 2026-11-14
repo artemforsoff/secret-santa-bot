@@ -1,16 +1,16 @@
 import type { Game, Participant, UserProfile } from "../domain/types.js";
 
-/** Чтение данных игры. Доступно и вне транзакции, и внутри неё. */
+/** Reading game data. Available both outside and inside a transaction. */
 export interface GameReader {
   getGame(chatId: number): Promise<Game | undefined>;
   getParticipant(chatId: number, userId: number): Promise<Participant | undefined>;
-  /** Участники в порядке записи. */
+  /** Participants in the order they joined. */
   getParticipants(chatId: number): Promise<Participant[]>;
 }
 
 /**
- * Операции внутри транзакции.
- * Ограничение Firestore: сначала все чтения, потом записи.
+ * Operations inside a transaction.
+ * Firestore constraint: all reads first, then writes.
  */
 export interface GameTransaction extends GameReader {
   addParticipant(chatId: number, participant: Participant): void;
@@ -21,12 +21,12 @@ export interface GameTransaction extends GameReader {
 
 export interface GameRepository extends GameReader {
   transaction<T>(fn: (tx: GameTransaction) => Promise<T>): Promise<T>;
-  /** Создаёт игру в беседе, стирая участников предыдущей. */
+  /** Creates a game in the group, wiping the previous game's participants. */
   replaceGame(game: Game): Promise<void>;
   updateGame(chatId: number, patch: Partial<Game>): Promise<void>;
-  /** Игры организатора, в которых жеребьёвка ещё не проведена. */
+  /** The organizer's games that have not been drawn yet. */
   findActiveGamesByOwner(ownerId: number): Promise<Game[]>;
-  /** Беседы, в которых пользователь записан участником. */
+  /** Groups in which the user is a participant. */
   findGameIdsByUser(userId: number): Promise<number[]>;
   getUserProfile(userId: number): Promise<UserProfile>;
   updateUserProfile(userId: number, patch: Partial<UserProfile>): Promise<void>;

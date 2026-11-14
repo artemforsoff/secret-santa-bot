@@ -12,7 +12,7 @@ const service = new GameService(new FirestoreGameRepository());
 const bot = createBot(token, service);
 
 if (process.env.K_SERVICE) {
-  // Cloud Run: принимаем апдейты через вебхук.
+  // Cloud Run: receive updates via webhook.
   const handle = webhookCallback(bot, "http", {
     secretToken: webhookSecret(token),
     timeoutMilliseconds: 55_000,
@@ -33,7 +33,7 @@ if (process.env.K_SERVICE) {
     }
   }).listen(port, () => console.log(`listening on ${port}`));
 } else {
-  // Локальный запуск: long polling.
+  // Local run: long polling.
   await bot.api.deleteWebhook();
   console.log("polling…");
   await bot.start();

@@ -8,7 +8,7 @@ import { registerWishlistController } from "./controllers/wishlistController.js"
 export function createBot(token: string, service: GameService): Bot {
   const bot = new Bot(token);
 
-  // В режиме вебхука ошибка привела бы к повторной доставке апдейта, поэтому только логируем.
+  // In webhook mode a thrown error would make Telegram redeliver the update, so we only log it.
   bot.use(async (_ctx, next) => {
     try {
       await next();
@@ -20,7 +20,7 @@ export function createBot(token: string, service: GameService): Bot {
   registerGroupController(bot, service);
   registerParticipantController(bot, service);
   registerOrganizerController(bot, service);
-  registerWishlistController(bot, service); // последним: ловит обычные сообщения в личке
+  registerWishlistController(bot, service); // last: it catches plain private messages
 
   return bot;
 }

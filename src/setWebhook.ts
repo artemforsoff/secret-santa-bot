@@ -1,11 +1,11 @@
-// Использование: BOT_TOKEN=... node dist/setWebhook.js https://<адрес сервиса Cloud Run>
+// Usage: BOT_TOKEN=... node dist/setWebhook.js https://<Cloud Run service URL>
 import { Api } from "grammy";
 import { webhookSecret } from "./telegram/webhookSecret.js";
 
 const token = process.env.BOT_TOKEN?.trim();
 const base = process.argv[2]?.replace(/\/+$/, "");
 if (!token || !base) {
-  console.error("Нужны переменная BOT_TOKEN и адрес сервиса первым аргументом.");
+  console.error("BOT_TOKEN and the service URL (first argument) are required.");
   process.exit(1);
 }
 
@@ -32,4 +32,4 @@ await api.setMyCommands(
   ],
   { scope: { type: "all_private_chats" } },
 );
-console.log(`Вебхук установлен: ${base}/webhook`);
+console.log(`Webhook set: ${base}/webhook`);

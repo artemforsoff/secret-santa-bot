@@ -5,7 +5,7 @@ import { cb } from "../callbackData.js";
 import { esc, label } from "./format.js";
 import { messages } from "./messages.js";
 
-/** Экран организатора в личке: текст и кнопки под ним. */
+/** An organizer screen in the private chat: text and the buttons under it. */
 export interface Screen {
   text: string;
   keyboard?: InlineKeyboard;
@@ -13,7 +13,7 @@ export interface Screen {
 
 const PAGE_SIZE = 8;
 
-/** Список участников кнопками, по одному в строке, с листанием. */
+/** Participants as buttons, one per row, with paging. */
 function participantsKeyboard(
   participants: Participant[],
   page: number,
@@ -34,7 +34,7 @@ function participantsKeyboard(
   return kb;
 }
 
-/** Выбор беседы, если организатор ведёт несколько игр. */
+/** Group picker for an organizer who runs several games. */
 export function chooseGameScreen(games: Game[], dataFor: (chatId: number) => string): Screen {
   const keyboard = new InlineKeyboard();
   for (const game of games) keyboard.text(game.title, dataFor(game.chatId)).row();

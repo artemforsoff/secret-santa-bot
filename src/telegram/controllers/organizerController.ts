@@ -18,11 +18,11 @@ import {
 
 const SEND_BATCH = 10;
 
-/** Личка организатора: пары, удаление участников и жеребьёвка. Команды открывают экран, кнопки ведут дальше. */
+/** The organizer's private chat: pairs, removing participants and the draw. Commands open a screen, buttons lead on. */
 export function registerOrganizerController(bot: Bot, service: GameService): void {
   const pm = bot.chatType("private");
 
-  // ---------- экраны ----------
+  // ---------- screens ----------
 
   const showPickFirst = async (ctx: Context, game: Game, page = 0) =>
     show(ctx, pickFirstScreen(game, await service.freeParticipants(game.chatId), page));
@@ -77,9 +77,9 @@ export function registerOrganizerController(bot: Bot, service: GameService): voi
     }
   };
 
-  // ---------- команды ----------
+  // ---------- commands ----------
 
-  /** Открывает экран для игры организатора; если игр несколько, сначала спрашивает, для какой. */
+  /** Opens a screen for the organizer's game; with several games it first asks which one. */
   const forOrganizerGame =
     (dataFor: (chatId: number) => string, open: (ctx: Context, game: Game) => Promise<void>) =>
     async (ctx: Context & { from: { id: number } }) => {
@@ -94,7 +94,7 @@ export function registerOrganizerController(bot: Bot, service: GameService): voi
   pm.command("remove", forOrganizerGame(cb.removeList, showRemoveList));
   pm.command("draw", forOrganizerGame(cb.confirmDraw, showDrawConfirm));
 
-  // ---------- кнопки ----------
+  // ---------- buttons ----------
 
   bot.on("callback_query:data", async (ctx) => {
     const data = parseCallback(ctx.callbackQuery.data);
@@ -134,7 +134,7 @@ export function registerOrganizerController(bot: Bot, service: GameService): voi
   });
 }
 
-/** Рассылает каждому его получателя. Возвращает тех, кому написать не удалось. */
+/** Sends everyone their recipient. Returns those who could not be messaged. */
 async function sendResults(api: Api, game: Game, assignments: Assignment[]): Promise<Participant[]> {
   const failed: Participant[] = [];
   for (let i = 0; i < assignments.length; i += SEND_BATCH) {
