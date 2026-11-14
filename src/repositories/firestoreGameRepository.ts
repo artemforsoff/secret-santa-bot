@@ -1,12 +1,12 @@
 import { FieldValue, Firestore } from "@google-cloud/firestore";
-import type { Game, Participant } from "../domain/types.js";
+import type { Game, Participant, UserProfile } from "../domain/types.js";
 import type { GameRepository, GameTransaction } from "./gameRepository.js";
 
 /**
  * Схема:
  *   games/{chatId}                        — Game
  *   games/{chatId}/participants/{userId}  — Participant
- *   users/{userId}                        — { games: chatId[] }
+ *   users/{userId}                        — { games: chatId[], wishlist?, wishlistPendingAt? }
  */
 export class FirestoreGameRepository implements GameRepository {
   private readonly db = new Firestore();
@@ -91,5 +91,17 @@ export class FirestoreGameRepository implements GameRepository {
   async findGameIdsByUser(userId: number): Promise<number[]> {
     const data = (await this.users.doc(String(userId)).get()).data();
     return (data?.games as number[] | undefined) ?? [];
+  }
+
+  async getUserProfile(userId: number): Promise<UserProfile> {
+    const data = (await this.users.doc(String(userId)).get()).data();
+    return {
+      wishlist: (data?.wishlist as string | undefined) ?? null,
+      wishlistPendingAt: (data?.wishlistPendingAt as number | undefined) ?? null,
+    };
+  }
+
+  async updateUserProfile(userId: number, patch: Partial<UserProfile>): Promise<void> {
+    await this.users.doc(String(userId)).set({ ...patch }, { merge: true });
   }
 }

@@ -139,9 +139,9 @@ async function sendResults(api: Api, game: Game, assignments: Assignment[]): Pro
   const failed: Participant[] = [];
   for (let i = 0; i < assignments.length; i += SEND_BATCH) {
     await Promise.all(
-      assignments.slice(i, i + SEND_BATCH).map(async ({ giver, recipient }) => {
+      assignments.slice(i, i + SEND_BATCH).map(async ({ giver, recipient, wishlist }) => {
         try {
-          await api.sendMessage(giver.userId, messages.result(game, recipient), HTML);
+          await api.sendMessage(giver.userId, messages.result(game, recipient, wishlist), HTML);
         } catch (e) {
           console.error("failed to notify participant", e);
           failed.push(giver);

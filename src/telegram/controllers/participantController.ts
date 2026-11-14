@@ -34,8 +34,8 @@ export function registerParticipantController(bot: Bot, service: GameService): v
 
   pm.command("me", async (ctx) => {
     const results = await service.myResults(ctx.from.id);
-    const lines = results.map(({ game, recipient }) =>
-      recipient ? messages.result(game, recipient) : messages.notDrawnYet(game),
+    const lines = results.map(({ game, recipient, wishlist }) =>
+      recipient ? messages.result(game, recipient, wishlist) : messages.notDrawnYet(game),
     );
     await ctx.reply(lines.length ? lines.join("\n\n") : messages.noGames, HTML);
   });

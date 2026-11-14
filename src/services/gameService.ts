@@ -4,6 +4,9 @@ import type { GameRepository } from "../repositories/gameRepository.js";
 
 export const MIN_PARTICIPANTS = 3;
 const MAX_CARDS = 10;
+export const MAX_WISHLIST_LENGTH = 1000;
+/** Сколько бот ждёт текст вишлиста после /wishlist. */
+const WISHLIST_PENDING_TTL_MS = 10 * 60 * 1000;
 
 /** Все сообщения-карточки игры в беседе, от старых к новым. */
 export function cardMessageIds(game: Game): number[] {
@@ -48,7 +51,15 @@ export interface DrawSummary {
 export interface Assignment {
   giver: Participant;
   recipient: Participant;
+  /** Вишлист получателя на момент жеребьёвки. */
+  wishlist: string | null;
 }
+
+export type SaveWishlistResult =
+  | { status: "saved"; wishlist: string }
+  | { status: "too_long"; max: number };
+
+export type SubmitWishlistResult = SaveWishlistResult | { status: "not_pending" };
 
 export type DrawFailure = "already_drawn" | "too_few" | "impossible";
 
@@ -60,11 +71,16 @@ export interface MyResult {
   game: Game;
   /** undefined, пока жеребьёвка не проведена. */
   recipient: Participant | undefined;
+  /** Актуальный вишлист получателя. */
+  wishlist: string | null;
 }
 
 /** Правила игры. Ничего не знает про Telegram и про то, где лежат данные. */
 export class GameService {
-  constructor(private readonly repo: GameRepository) {}
+  constructor(
+    private readonly repo: GameRepository,
+    private readonly now: () => number = Date.now,
+  ) {}
 
   // ---------- игра в беседе ----------
 
@@ -122,7 +138,7 @@ export class GameService {
       if (!game) return { status: "not_found" };
       if (await tx.getParticipant(chatId, user.userId)) return { status: "already_joined", game };
       if (game.drawn) return { status: "closed", game };
-      tx.addParticipant(chatId, { ...user, partnerId: null, recipientId: null, joinedAt: Date.now() });
+      tx.addParticipant(chatId, { ...user, partnerId: null, recipientId: null, joinedAt: this.now() });
       return { status: "joined", game };
     });
   }
@@ -138,9 +154,41 @@ export class GameService {
       if (!game || !me) continue;
       const recipient =
         game.drawn && me.recipientId ? await this.repo.getParticipant(chatId, me.recipientId) : undefined;
-      results.push({ game, recipient });
+      const wishlist = recipient ? await this.getWishlist(recipient.userId) : null;
+      results.push({ game, recipient, wishlist });
     }
     return results;
+  }
+
+  // ---------- вишлист ----------
+  // Вишлист один на человека и общий для всех его игр. Видит его только Тайный Санта.
+
+  async getWishlist(userId: number): Promise<string | null> {
+    return (await this.repo.getUserProfile(userId)).wishlist;
+  }
+
+  /** /wishlist без текста: бот начинает ждать следующее сообщение. Возвращает текущий вишлист. */
+  async startWishlistEdit(userId: number): Promise<string | null> {
+    const { wishlist } = await this.repo.getUserProfile(userId);
+    await this.repo.updateUserProfile(userId, { wishlistPendingAt: this.now() });
+    return wishlist;
+  }
+
+  /** Сохраняет вишлист, заменяя прежний. */
+  async saveWishlist(userId: number, text: string): Promise<SaveWishlistResult> {
+    const wishlist = text.trim();
+    if (wishlist.length > MAX_WISHLIST_LENGTH) return { status: "too_long", max: MAX_WISHLIST_LENGTH };
+    await this.repo.updateUserProfile(userId, { wishlist, wishlistPendingAt: null });
+    return { status: "saved", wishlist };
+  }
+
+  /** Обычное сообщение в личке: сохраняется как вишлист, только если бот его ждёт. */
+  async submitPendingWishlist(userId: number, text: string): Promise<SubmitWishlistResult> {
+    const { wishlistPendingAt } = await this.repo.getUserProfile(userId);
+    if (!wishlistPendingAt || this.now() - wishlistPendingAt > WISHLIST_PENDING_TTL_MS) {
+      return { status: "not_pending" };
+    }
+    return this.saveWishlist(userId, text);
   }
 
   // ---------- организатор ----------
@@ -240,6 +288,17 @@ export class GameService {
 
   /** Жеребьёвка проводится ровно один раз: повторный вызов вернёт already_drawn. */
   async draw(chatId: number): Promise<DrawResult> {
+    const result = await this.drawInTransaction(chatId);
+    if (result.status !== "ok") return result;
+    await Promise.all(
+      result.assignments.map(async (a) => {
+        a.wishlist = await this.getWishlist(a.recipient.userId);
+      }),
+    );
+    return result;
+  }
+
+  private drawInTransaction(chatId: number): Promise<DrawResult> {
     return this.repo.transaction<DrawResult>(async (tx) => {
       const game = await tx.getGame(chatId);
       if (!game || game.drawn) return { status: "failed", reason: "already_drawn" };
@@ -256,7 +315,7 @@ export class GameService {
       for (const giver of participants) {
         const recipientId = cycle.get(giver.userId)!;
         tx.updateParticipant(chatId, giver.userId, { recipientId });
-        assignments.push({ giver, recipient: byId.get(recipientId)! });
+        assignments.push({ giver, recipient: byId.get(recipientId)!, wishlist: null });
       }
       tx.updateGame(chatId, { drawn: true });
       return { status: "ok", assignments };

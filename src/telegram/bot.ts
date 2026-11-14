@@ -3,6 +3,7 @@ import type { GameService } from "../services/gameService.js";
 import { registerGroupController } from "./controllers/groupController.js";
 import { registerOrganizerController } from "./controllers/organizerController.js";
 import { registerParticipantController } from "./controllers/participantController.js";
+import { registerWishlistController } from "./controllers/wishlistController.js";
 
 export function createBot(token: string, service: GameService): Bot {
   const bot = new Bot(token);
@@ -19,6 +20,7 @@ export function createBot(token: string, service: GameService): Bot {
   registerGroupController(bot, service);
   registerParticipantController(bot, service);
   registerOrganizerController(bot, service);
+  registerWishlistController(bot, service); // последним: ловит обычные сообщения в личке
 
   return bot;
 }

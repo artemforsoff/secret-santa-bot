@@ -1,4 +1,4 @@
-import type { Game, Participant } from "../domain/types.js";
+import type { Game, Participant, UserProfile } from "../domain/types.js";
 
 /** Чтение данных игры. Доступно и вне транзакции, и внутри неё. */
 export interface GameReader {
@@ -28,4 +28,6 @@ export interface GameRepository extends GameReader {
   findActiveGamesByOwner(ownerId: number): Promise<Game[]>;
   /** Беседы, в которых пользователь записан участником. */
   findGameIdsByUser(userId: number): Promise<number[]>;
+  getUserProfile(userId: number): Promise<UserProfile>;
+  updateUserProfile(userId: number, patch: Partial<UserProfile>): Promise<void>;
 }

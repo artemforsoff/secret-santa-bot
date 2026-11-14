@@ -23,7 +23,8 @@ await api.setMyCommands(
 );
 await api.setMyCommands(
   [
-    { command: "me", description: "Кому я дарю подарок" },
+    { command: "me", description: "Кому я дарю подарок и его вишлист" },
+    { command: "wishlist", description: "Написать или обновить свой вишлист" },
     { command: "pair", description: "Организатору: задать пару" },
     { command: "pairs", description: "Организатору: список пар" },
     { command: "remove", description: "Организатору: убрать участника" },

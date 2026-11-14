@@ -50,7 +50,7 @@ export function registerGroupController(bot: Bot, service: GameService): void {
   });
 
   // Команды организатора и участника работают только в личке.
-  group.command(["pair", "pairs", "remove", "draw", "me"], (ctx) =>
+  group.command(["pair", "pairs", "remove", "draw", "me", "wishlist"], (ctx) =>
     ctx.reply(messages.privateOnly, { reply_markup: openBotKeyboard(ctx.me.username) }),
   );
 }

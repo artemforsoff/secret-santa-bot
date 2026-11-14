@@ -47,6 +47,18 @@ function setup() {
   const inGroup = (from: number, text: string) => command(GROUP, from, text);
   const inPrivate = (from: number, text: string) =>
     command({ id: from, type: "private", first_name: `User${from}` }, from, text);
+  /** Обычное сообщение в личке, не команда. */
+  const say = (from: number, text: string) =>
+    bot.handleUpdate({
+      update_id: ++updateId,
+      message: {
+        message_id: 1000 + updateId,
+        date: 0,
+        chat: { id: from, type: "private", first_name: `User${from}` },
+        from: user(from),
+        text,
+      },
+    } as Update);
   const press = (from: number, data: string) =>
     bot.handleUpdate({
       update_id: ++updateId,
@@ -68,7 +80,7 @@ function setup() {
   const buttons = (call: Call): string[] =>
     (call.payload.reply_markup?.inline_keyboard ?? []).flat().map((b: any) => b.callback_data ?? b.url);
 
-  return { inGroup, inPrivate, press, during, buttons };
+  return { inGroup, inPrivate, say, press, during, buttons };
 }
 
 test("полный сценарий: игра, запись, пары, жеребьёвка, /me", async () => {
@@ -217,6 +229,62 @@ test("повторный /santa и /list: обновляются все карт
   await inPrivate(3, "/start j-100");
   const removeCalls = await during(() => press(1, "x:-100:3"));
   assert.deepEqual(editedCards(removeCalls), cards);
+});
+
+test("вишлист: написать, обновить, Санта видит его в рассылке и в /me", async () => {
+  const { inGroup, inPrivate, say, press, during } = setup();
+
+  // обычное сообщение без /wishlist бот не трогает
+  assert.deepEqual(await during(() => say(2, "просто текст")), []);
+
+  // /wishlist → бот ждёт текст → следующее сообщение сохраняется
+  const [prompt] = await during(() => inPrivate(2, "/wishlist"));
+  assert.match(prompt.payload.text, /Напиши одним сообщением/);
+  const [saved] = await during(() => say(2, "Носки <тёплые> & чай"));
+  assert.match(saved.payload.text, /Вишлист сохранён/);
+  assert.match(saved.payload.text, /<blockquote>Носки &lt;тёплые&gt; &amp; чай<\/blockquote>/);
+  // после сохранения бот больше не ждёт текст
+  assert.deepEqual(await during(() => say(2, "ещё текст")), []);
+
+  // повторный /wishlist показывает текущий и заменяет его
+  const [again] = await during(() => inPrivate(2, "/wishlist"));
+  assert.match(again.payload.text, /Твой вишлист сейчас:\n<blockquote>Носки/);
+  // команда во время ожидания не сохраняется как вишлист
+  const [me] = await during(() => inPrivate(2, "/me"));
+  assert.match(me.payload.text, /не участвуешь/);
+  const [replaced] = await during(() => say(2, "Книга"));
+  assert.match(replaced.payload.text, /<blockquote>Книга<\/blockquote>/);
+
+  // слишком длинный текст отклоняется, ожидание сохраняется
+  await inPrivate(3, "/wishlist");
+  const [tooLong] = await during(() => say(3, "я".repeat(1001)));
+  assert.match(tooLong.payload.text, /максимум 1000 символов/);
+  const [ok] = await during(() => say(3, "Плед"));
+  assert.match(ok.payload.text, /<blockquote>Плед<\/blockquote>/);
+
+  // /wishlist с текстом сохраняет сразу
+  const [inline] = await during(() => inPrivate(1, "/wishlist Кофе"));
+  assert.match(inline.payload.text, /<blockquote>Кофе<\/blockquote>/);
+
+  // жеребьёвка: каждому приходит вишлист его получателя
+  await inGroup(1, "/santa");
+  for (const id of [1, 2, 3, 4]) await inPrivate(id, "/start j-100");
+  const wishes: Record<string, string> = { User1: "Кофе", User2: "Книга", User3: "Плед" };
+  const drawCalls = await during(() => press(1, "g:-100"));
+  const results = drawCalls.filter((c) => c.method === "sendMessage" && c.payload.chat_id > 0);
+  assert.equal(results.length, 4);
+  const recipientOf = (text: string) => /<tg-spoiler>(User\d)<\/tg-spoiler>/.exec(text)![1];
+  for (const r of results) {
+    const wish = wishes[recipientOf(r.payload.text)];
+    if (wish) assert.match(r.payload.text, new RegExp(`Вишлист:\\n<blockquote>${wish}</blockquote>`));
+    else assert.match(r.payload.text, /Вишлиста пока нет/);
+  }
+
+  // получатель обновил вишлист после жеребьёвки — Санта видит новый в /me
+  const santaOf4 = results.find((r) => recipientOf(r.payload.text) === "User4")!.payload.chat_id;
+  await inPrivate(4, "/wishlist Наушники");
+  const [after] = await during(() => inPrivate(santaOf4, "/me"));
+  assert.match(after.payload.text, /<tg-spoiler>User4<\/tg-spoiler>\n\n🎁 Вишлист:\n<blockquote>Наушники<\/blockquote>/);
 });
 
 test("/start без параметра и команды организатора в беседе", async () => {

@@ -14,6 +14,14 @@ export interface Game {
   drawn: boolean;
 }
 
+/** Данные человека, общие для всех его игр. */
+export interface UserProfile {
+  /** Что человек хотел бы получить; видит только его Тайный Санта. */
+  wishlist: string | null;
+  /** Когда человек вызвал /wishlist и бот ждёт от него текст; null, если не ждёт. */
+  wishlistPendingAt: number | null;
+}
+
 export interface Participant {
   userId: number;
   name: string;

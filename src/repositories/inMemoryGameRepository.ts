@@ -1,4 +1,4 @@
-import type { Game, Participant } from "../domain/types.js";
+import type { Game, Participant, UserProfile } from "../domain/types.js";
 import type { GameRepository, GameTransaction } from "./gameRepository.js";
 
 /** Репозиторий в памяти: для тестов сервиса без Firestore. */
@@ -6,6 +6,7 @@ export class InMemoryGameRepository implements GameRepository {
   private readonly games = new Map<number, Game>();
   private readonly participants = new Map<number, Map<number, Participant>>();
   private readonly userGames = new Map<number, Set<number>>();
+  private readonly profiles = new Map<number, Partial<UserProfile>>();
 
   private partsOf(chatId: number): Map<number, Participant> {
     let parts = this.participants.get(chatId);
@@ -71,5 +72,13 @@ export class InMemoryGameRepository implements GameRepository {
 
   async findGameIdsByUser(userId: number): Promise<number[]> {
     return [...(this.userGames.get(userId) ?? [])];
+  }
+
+  async getUserProfile(userId: number): Promise<UserProfile> {
+    return { wishlist: null, wishlistPendingAt: null, ...this.profiles.get(userId) };
+  }
+
+  async updateUserProfile(userId: number, patch: Partial<UserProfile>): Promise<void> {
+    this.profiles.set(userId, { ...this.profiles.get(userId), ...patch });
   }
 }

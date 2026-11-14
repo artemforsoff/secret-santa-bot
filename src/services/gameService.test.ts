@@ -92,6 +92,33 @@ test("карточки: помним все, старая игра с одним
   assert.deepEqual(cardMessageIds((await repo.getGame(CHAT))!), [34, 82]);
 });
 
+test("вишлист: ожидание текста истекает через 10 минут", async () => {
+  let now = 1_000_000;
+  const service = new GameService(new InMemoryGameRepository(), () => now);
+
+  assert.deepEqual(await service.submitPendingWishlist(1, "текст"), { status: "not_pending" });
+  assert.equal(await service.startWishlistEdit(1), null);
+  now += 11 * 60 * 1000;
+  assert.deepEqual(await service.submitPendingWishlist(1, "поздно"), { status: "not_pending" });
+  assert.equal(await service.getWishlist(1), null);
+
+  await service.startWishlistEdit(1);
+  now += 9 * 60 * 1000;
+  assert.deepEqual(await service.submitPendingWishlist(1, "  вовремя  "), { status: "saved", wishlist: "вовремя" });
+  assert.equal(await service.getWishlist(1), "вовремя");
+  assert.equal(await service.startWishlistEdit(1), "вовремя");
+});
+
+test("вишлист переживает удаление из игры и повторную запись", async () => {
+  const { service, start, join, joinMany } = setup();
+  await start();
+  await joinMany(1, 2, 3);
+  await service.saveWishlist(2, "Книга");
+  await service.removeParticipant(CHAT, 2);
+  await join(2);
+  assert.equal(await service.getWishlist(2), "Книга");
+});
+
 test("удаление участника: пара расформировывается, можно записаться заново", async () => {
   const { service, start, join, joinMany } = setup();
   await start();

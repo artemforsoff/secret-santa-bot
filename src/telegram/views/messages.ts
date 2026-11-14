@@ -9,7 +9,8 @@ export const messages = {
     "/list в беседе покажет актуальный список участников.\n\n" +
     "Организатору (в личке):\n/pair — задать пару, которая не выпадет друг другу\n" +
     "/pairs — список пар\n/remove — убрать участника\n/draw — провести жеребьёвку\n\n" +
-    "Участнику:\n/me — кому я дарю подарок",
+    "Участнику:\n/wishlist — написать или обновить свой вишлист\n" +
+    "/me — кому я дарю подарок и его вишлист",
 
   // ----- беседа -----
   anonymousAdmin: "Запусти игру от своего имени, а не как анонимный админ.",
@@ -28,9 +29,24 @@ export const messages = {
   joined: (firstName: string, game: Game) =>
     `Привет, ${esc(firstName)}! Ты участвуешь в Тайном Санте беседы «${esc(game.title)}» 🎅\n\n` +
     "Когда организатор проведёт жеребьёвку, я напишу сюда, кому ты даришь подарок.",
-  result: (game: Game, recipient: Participant) =>
+  result: (game: Game, recipient: Participant, wishlist: string | null) =>
     `🎅 Тайный Санта в «${esc(game.title)}»\n\n` +
-    `Ты даришь подарок: <tg-spoiler>${esc(label(recipient))}</tg-spoiler>`,
+    `Ты даришь подарок: <tg-spoiler>${esc(label(recipient))}</tg-spoiler>\n\n` +
+    (wishlist
+      ? `🎁 Вишлист:\n<blockquote>${esc(wishlist)}</blockquote>`
+      : "Вишлиста пока нет. Загляни в /me позже — вдруг появится."),
+
+  // ----- вишлист -----
+  wishlistPrompt: (current: string | null) =>
+    current
+      ? `Твой вишлист сейчас:\n<blockquote>${esc(current)}</blockquote>\n\n` +
+        "Пришли новый текст одним сообщением, и я заменю им текущий."
+      : "Напиши одним сообщением, что ты хотел бы получить. Я покажу это твоему Тайному Санте.",
+  wishlistSaved: (wishlist: string) =>
+    `✅ Вишлист сохранён:\n<blockquote>${esc(wishlist)}</blockquote>\n\n` +
+    "Его увидит твой Тайный Санта. Чтобы изменить, снова отправь /wishlist.",
+  wishlistTooLong: (max: number) =>
+    `Слишком длинно: максимум ${max} символов. Сократи и пришли ещё раз.`,
   notDrawnYet: (game: Game) => `В «${esc(game.title)}» жеребьёвки ещё не было.`,
   noGames: "Ты пока не участвуешь ни в одной игре.",
 
