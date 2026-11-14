@@ -7,6 +7,10 @@ it does and how the code is laid out.
 
 - A push to `main` deploys to production. Push only after the owner confirms; commit locally first
   and say what is not deployed yet.
+- Every successful deploy becomes a GitHub release (`vMAJOR.MINOR.PATCH`). The patch number grows
+  by default; add `[minor]` to the commit message for a new user-facing feature and `[major]` for a
+  breaking change. The first line of each commit message ends up in the release notes, so keep it
+  meaningful.
 - Real games are stored in Firestore. Schema changes must be backward compatible: read old documents
   correctly (see `cardMessageIds` for an example) instead of migrating them by hand.
 - Do not print draw results (`recipientId`) when inspecting the database: the organizer plays too.

@@ -62,6 +62,10 @@ the result. The service knows the game rules and nothing about Telegram. The rep
 Push to `main`. The [deploy workflow](.github/workflows/deploy.yml) runs the tests, builds the image
 and rolls it out to Cloud Run; see the workflow for details. If the tests fail, nothing is deployed.
 
+Every successful deploy is published as a GitHub release with the next version number. By default
+the patch number grows (`v1.0.3` → `v1.0.4`). Put `[minor]` or `[major]` into the commit message to
+bump that part instead. The release notes list the commits since the previous release.
+
 The bot publishes its command menu to Telegram on startup, so the menu follows the deployed code.
 
 The webhook is set once per service URL:

@@ -9,7 +9,7 @@ concurrency:
   cancel-in-progress: false
 
 permissions:
-  contents: read
+  contents: write # publishing the GitHub release
   id-token: write # keyless sign-in to GCP via Workload Identity Federation
 
 env:
@@ -47,3 +47,26 @@ jobs:
       # Only the image changes: the service account, the token secret and the limits stay as configured.
       - name: Deploy to Cloud Run
         run: gcloud run deploy "$SERVICE" --image "$IMAGE" --region "$REGION" --project "${{ vars.GCP_PROJECT_ID }}" --quiet
+
+      # Every successful deploy becomes a release: the patch number grows by one,
+      # or the minor/major one if the commit message contains [minor] or [major].
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          COMMIT_MESSAGE: ${{ github.event.head_commit.message }}
+        run: |
+          latest=$(gh api "repos/$GITHUB_REPOSITORY/releases/latest" --jq .tag_name 2>/dev/null || true)
+          released=$(gh api "repos/$GITHUB_REPOSITORY/releases/latest" --jq .target_commitish 2>/dev/null || true)
+          if [[ "$released" == "$GITHUB_SHA" ]]; then
+            echo "This commit is already released as $latest (workflow re-run)."
+            exit 0
+          fi
+          version=$(bash .github/scripts/next-version.sh "$latest" "$COMMIT_MESSAGE")
+          if [[ "$latest" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            notes=$(gh api "repos/$GITHUB_REPOSITORY/compare/$latest...$GITHUB_SHA" \
+              --jq '.commits[] | "- " + (.commit.message | split("\n")[0]) + " (" + .sha[0:7] + ")"')
+          else
+            notes="Initial release."
+          fi
+          gh release create "$version" --target "$GITHUB_SHA" --title "$version" --notes "$notes"
+          echo "Released $version" >> "$GITHUB_STEP_SUMMARY"
