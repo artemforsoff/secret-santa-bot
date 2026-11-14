@@ -15,6 +15,7 @@ export interface GameReader {
 export interface GameTransaction extends GameReader {
   addParticipant(chatId: number, participant: Participant): void;
   updateParticipant(chatId: number, userId: number, patch: Partial<Participant>): void;
+  removeParticipant(chatId: number, userId: number): void;
   updateGame(chatId: number, patch: Partial<Game>): void;
 }
 

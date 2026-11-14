@@ -44,6 +44,10 @@ export class InMemoryGameRepository implements GameRepository {
         const p = this.partsOf(chatId).get(userId);
         if (p) Object.assign(p, patch);
       },
+      removeParticipant: (chatId, userId) => {
+        this.partsOf(chatId).delete(userId);
+        this.userGames.get(userId)?.delete(chatId);
+      },
       updateGame: (chatId, patch) => {
         const game = this.games.get(chatId);
         if (game) Object.assign(game, patch);

@@ -143,6 +143,28 @@ export class GameService {
     return { status: game.drawn ? "drawn" : "ok", game };
   }
 
+  participants(chatId: number): Promise<Participant[]> {
+    return this.repo.getParticipants(chatId);
+  }
+
+  /**
+   * Убирает участника из игры до жеребьёвки; его пара, если была, расформировывается.
+   * Возвращает убранного участника или undefined, если убирать некого или игра уже разыграна.
+   */
+  async removeParticipant(chatId: number, userId: number): Promise<Participant | undefined> {
+    return this.repo.transaction(async (tx) => {
+      const game = await tx.getGame(chatId);
+      const participant = await tx.getParticipant(chatId, userId);
+      if (!game || game.drawn || !participant) return undefined;
+      const partner = participant.partnerId
+        ? await tx.getParticipant(chatId, participant.partnerId)
+        : undefined;
+      if (partner) tx.updateParticipant(chatId, partner.userId, { partnerId: null });
+      tx.removeParticipant(chatId, userId);
+      return participant;
+    });
+  }
+
   /** Участники, у которых ещё нет пары. */
   async freeParticipants(chatId: number): Promise<Participant[]> {
     return (await this.repo.getParticipants(chatId)).filter((p) => !p.partnerId);

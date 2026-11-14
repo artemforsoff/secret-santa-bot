@@ -74,6 +74,32 @@ test("пары: добавление, отказ для занятых, удал
   assert.equal((await service.freeParticipants(CHAT)).length, 4);
 });
 
+test("удаление участника: пара расформировывается, можно записаться заново", async () => {
+  const { service, start, join, joinMany } = setup();
+  await start();
+  await joinMany(1, 2, 3, 4);
+  await service.addPair(CHAT, 1, 2);
+
+  const removed = await service.removeParticipant(CHAT, 2);
+  assert.equal(removed?.userId, 2);
+  assert.deepEqual((await service.participants(CHAT)).map((p) => p.userId), [1, 3, 4]);
+  assert.equal((await service.listPairs(CHAT)).length, 0);
+  assert.deepEqual((await service.freeParticipants(CHAT)).map((p) => p.userId), [1, 3, 4]);
+  assert.deepEqual(await service.myResults(2), []);
+
+  assert.equal(await service.removeParticipant(CHAT, 2), undefined, "уже убран");
+  assert.equal((await join(2)).status, "joined");
+});
+
+test("удаление участника после жеребьёвки запрещено", async () => {
+  const { service, start, joinMany } = setup();
+  await start();
+  await joinMany(1, 2, 3);
+  await service.draw(CHAT);
+  assert.equal(await service.removeParticipant(CHAT, 2), undefined);
+  assert.equal((await service.participants(CHAT)).length, 3);
+});
+
 test("жеребьёвка: меньше трёх участников", async () => {
   const { service, start, joinMany } = setup();
   await start();

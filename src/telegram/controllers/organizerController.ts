@@ -8,7 +8,9 @@ import { HTML } from "../views/format.js";
 import { messages } from "../views/messages.js";
 import {
   chooseGameScreen,
+  confirmRemoveScreen,
   drawConfirmScreen,
+  removeListScreen,
   pairsScreen,
   pickFirstScreen,
   pickSecondScreen,
@@ -16,7 +18,7 @@ import {
 
 const SEND_BATCH = 10;
 
-/** Личка организатора: пары и жеребьёвка. Команды открывают экран, кнопки ведут дальше. */
+/** Личка организатора: пары, удаление участников и жеребьёвка. Команды открывают экран, кнопки ведут дальше. */
 export function registerOrganizerController(bot: Bot, service: GameService): void {
   const pm = bot.chatType("private");
 
@@ -33,6 +35,27 @@ export function registerOrganizerController(bot: Bot, service: GameService): voi
 
   const showPairs = async (ctx: Context, game: Game, note = "") =>
     show(ctx, pairsScreen(game, await service.listPairs(game.chatId), note));
+
+  const showRemoveList = async (ctx: Context, game: Game, page = 0, note = "") =>
+    show(ctx, removeListScreen(game, await service.participants(game.chatId), page, note));
+
+  const showConfirmRemove = async (ctx: Context, game: Game, userId: number) => {
+    const participant = (await service.participants(game.chatId)).find((p) => p.userId === userId);
+    if (!participant) return showRemoveList(ctx, game, 0, messages.participantNotFound);
+    return show(ctx, confirmRemoveScreen(game, participant));
+  };
+
+  const removeParticipant = async (ctx: Context, game: Game, userId: number) => {
+    const removed = await service.removeParticipant(game.chatId, userId);
+    if (!removed) return showRemoveList(ctx, game, 0, messages.participantNotFound);
+    await showRemoveList(ctx, game, 0, messages.participantRemoved(removed));
+    await refreshCard(ctx.api, ctx.me.username, service, game.chatId);
+    try {
+      await ctx.api.sendMessage(removed.userId, messages.removedNotice(game), HTML);
+    } catch (e) {
+      console.error("failed to notify removed participant", e);
+    }
+  };
 
   const showDrawConfirm = async (ctx: Context, game: Game) =>
     show(ctx, drawConfirmScreen(game, await service.drawSummary(game.chatId)));
@@ -68,6 +91,7 @@ export function registerOrganizerController(bot: Bot, service: GameService): voi
 
   pm.command("pair", forOrganizerGame(cb.pickFirst, showPickFirst));
   pm.command("pairs", forOrganizerGame(cb.listPairs, showPairs));
+  pm.command("remove", forOrganizerGame(cb.removeList, showRemoveList));
   pm.command("draw", forOrganizerGame(cb.confirmDraw, showDrawConfirm));
 
   // ---------- кнопки ----------
@@ -96,6 +120,12 @@ export function registerOrganizerController(bot: Bot, service: GameService): voi
       case "removePair":
         await service.removePair(game.chatId, data.userId);
         return showPairs(ctx, game, messages.pairRemoved);
+      case "removeList":
+        return showRemoveList(ctx, game, data.page);
+      case "confirmRemove":
+        return showConfirmRemove(ctx, game, data.userId);
+      case "removeParticipant":
+        return removeParticipant(ctx, game, data.userId);
       case "confirmDraw":
         return showDrawConfirm(ctx, game);
       case "draw":

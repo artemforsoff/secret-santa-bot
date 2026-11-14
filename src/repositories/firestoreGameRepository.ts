@@ -59,6 +59,14 @@ export class FirestoreGameRepository implements GameRepository {
         updateParticipant: (chatId, userId, patch) => {
           t.update(this.participantRef(chatId, userId), { ...patch });
         },
+        removeParticipant: (chatId, userId) => {
+          t.delete(this.participantRef(chatId, userId));
+          t.set(
+            this.users.doc(String(userId)),
+            { games: FieldValue.arrayRemove(chatId) },
+            { merge: true },
+          );
+        },
         updateGame: (chatId, patch) => {
           t.update(this.gameRef(chatId), { ...patch });
         },

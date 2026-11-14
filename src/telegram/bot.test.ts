@@ -146,6 +146,42 @@ test("полный сценарий: игра, запись, пары, жере�
   assert.match(second.payload.text, /уже проведена/);
 });
 
+test("организатор убирает участника через /remove", async () => {
+  const { inGroup, inPrivate, press, during, buttons } = setup();
+  await inGroup(1, "/santa");
+  for (const id of [1, 2, 3, 4]) await inPrivate(id, "/start j-100");
+  await press(1, "s:-100:2:3");
+
+  const [list] = await during(() => inPrivate(1, "/remove"));
+  assert.deepEqual(buttons(list), ["k:-100:1", "k:-100:2", "k:-100:3", "k:-100:4"]);
+
+  const confirm = (await during(() => press(1, "k:-100:2"))).at(-1)!;
+  assert.match(confirm.payload.text, /Убрать <b>User2<\/b>/);
+  assert.match(confirm.payload.text, /Пара с этим участником будет расформирована/);
+  assert.deepEqual(buttons(confirm), ["x:-100:2", "r:-100:0"]);
+
+  // чужой нажать кнопку не может
+  const [denied] = await during(() => press(3, "x:-100:2"));
+  assert.equal(denied.payload.text, "Это не твоя игра.");
+
+  const calls = await during(() => press(1, "x:-100:2"));
+  const screen = calls.find((c) => c.method === "editMessageText" && c.payload.chat_id !== GROUP.id)!;
+  assert.match(screen.payload.text, /User2 больше не участвует/);
+  assert.deepEqual(buttons(screen), ["k:-100:1", "k:-100:3", "k:-100:4"]);
+  const card = calls.find((c) => c.method === "editMessageText" && c.payload.chat_id === GROUP.id)!;
+  assert.match(card.payload.text, /Участвуют \(3\)/);
+  assert.doesNotMatch(card.payload.text, /User2/);
+  const notice = calls.find((c) => c.method === "sendMessage")!;
+  assert.equal(notice.payload.chat_id, 2);
+  assert.match(notice.payload.text, /убрал тебя/);
+
+  // пара убранного расформирована, сам он может записаться заново
+  const pairs = (await during(() => press(1, "l:-100"))).at(-1)!;
+  assert.match(pairs.payload.text, /Пар пока нет/);
+  const [rejoin] = await during(() => inPrivate(2, "/start j-100"));
+  assert.match(rejoin.payload.text, /Ты участвуешь/);
+});
+
 test("/start без параметра и команды организатора в беседе", async () => {
   const { inGroup, inPrivate, during } = setup();
   const [help] = await during(() => inPrivate(1, "/start"));

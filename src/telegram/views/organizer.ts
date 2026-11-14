@@ -84,6 +84,30 @@ export function pairsScreen(game: Game, pairs: Pair[], note = ""): Screen {
   return { text: `${note}Пары в беседе «${esc(game.title)}»:\n${body}`, keyboard };
 }
 
+export function removeListScreen(game: Game, participants: Participant[], page: number, note = ""): Screen {
+  if (!participants.length) return { text: note + messages.noParticipants };
+  return {
+    text: `${note}Беседа «${esc(game.title)}».\nКого убрать из игры?`,
+    keyboard: participantsKeyboard(
+      participants,
+      page,
+      (p) => cb.confirmRemove(game.chatId, p.userId),
+      (n) => cb.removeList(game.chatId, n),
+    ),
+  };
+}
+
+export function confirmRemoveScreen(game: Game, participant: Participant): Screen {
+  const pairNote = participant.partnerId ? "\nПара с этим участником будет расформирована." : "";
+  return {
+    text: `Убрать <b>${esc(label(participant))}</b> из игры в «${esc(game.title)}»?${pairNote}`,
+    keyboard: new InlineKeyboard()
+      .text("Да, убрать", cb.removeParticipant(game.chatId, participant.userId))
+      .row()
+      .text("← Назад", cb.removeList(game.chatId)),
+  };
+}
+
 export function drawConfirmScreen(game: Game, summary: DrawSummary): Screen {
   const head =
     `Беседа «${esc(game.title)}»\nУчастников: ${summary.participants}\nПар: ${summary.pairs}\n\n`;

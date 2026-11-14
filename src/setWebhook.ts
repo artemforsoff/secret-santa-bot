@@ -22,6 +22,7 @@ await api.setMyCommands(
     { command: "me", description: "Кому я дарю подарок" },
     { command: "pair", description: "Организатору: задать пару" },
     { command: "pairs", description: "Организатору: список пар" },
+    { command: "remove", description: "Организатору: убрать участника" },
     { command: "draw", description: "Организатору: провести жеребьёвку" },
   ],
   { scope: { type: "all_private_chats" } },

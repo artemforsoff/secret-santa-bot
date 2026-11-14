@@ -8,6 +8,9 @@ export type Callback =
   | { action: "savePair"; chatId: number; firstId: number; secondId: number }
   | { action: "listPairs"; chatId: number }
   | { action: "removePair"; chatId: number; userId: number }
+  | { action: "removeList"; chatId: number; page: number }
+  | { action: "confirmRemove"; chatId: number; userId: number }
+  | { action: "removeParticipant"; chatId: number; userId: number }
   | { action: "confirmDraw"; chatId: number }
   | { action: "draw"; chatId: number };
 
@@ -17,6 +20,9 @@ export const cb = {
   savePair: (chatId: number, firstId: number, secondId: number) => `s:${chatId}:${firstId}:${secondId}`,
   listPairs: (chatId: number) => `l:${chatId}`,
   removePair: (chatId: number, userId: number) => `d:${chatId}:${userId}`,
+  removeList: (chatId: number, page = 0) => `r:${chatId}:${page}`,
+  confirmRemove: (chatId: number, userId: number) => `k:${chatId}:${userId}`,
+  removeParticipant: (chatId: number, userId: number) => `x:${chatId}:${userId}`,
   confirmDraw: (chatId: number) => `c:${chatId}`,
   draw: (chatId: number) => `g:${chatId}`,
 };
@@ -37,6 +43,12 @@ export function parseCallback(data: string): Callback | undefined {
       return { action: "listPairs", chatId };
     case "d":
       return { action: "removePair", chatId, userId: num(x) };
+    case "r":
+      return { action: "removeList", chatId, page: num(x) };
+    case "k":
+      return { action: "confirmRemove", chatId, userId: num(x) };
+    case "x":
+      return { action: "removeParticipant", chatId, userId: num(x) };
     case "c":
       return { action: "confirmDraw", chatId };
     case "g":
