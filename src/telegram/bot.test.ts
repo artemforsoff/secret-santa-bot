@@ -5,7 +5,9 @@ import { test } from "node:test";
 import type { Update, UserFromGetMe } from "grammy/types";
 import { InMemoryGameRepository } from "../repositories/inMemoryGameRepository.js";
 import { GameService } from "../services/gameService.js";
+import { Api } from "grammy";
 import { createBot } from "./bot.js";
+import { publishCommands } from "./commands.js";
 
 const GROUP = { id: -100, type: "supergroup" as const, title: "Беседа" };
 const user = (id: number) => ({ id, is_bot: false, first_name: `User${id}` });
@@ -285,6 +287,28 @@ test("wishlist: write, update, the Santa sees it in the draw message and in /me"
   await inPrivate(4, "/wishlist Наушники");
   const [after] = await during(() => inPrivate(santaOf4, "/me"));
   assert.match(after.payload.text, /<tg-spoiler>User4<\/tg-spoiler>\n\n🎁 Вишлист:\n<blockquote>Наушники<\/blockquote>/);
+});
+
+test("the published menu lists exactly the commands the bot handles", async () => {
+  const published: Record<string, string[]> = {};
+  const api = new Api("test-token");
+  api.config.use(async (_prev, method, payload) => {
+    assert.equal(method, "setMyCommands");
+    const p = payload as any;
+    published[p.scope.type] = p.commands.map((c: any) => c.command);
+    return { ok: true, result: true } as any;
+  });
+  await publishCommands(api);
+  assert.deepEqual(Object.keys(published).sort(), ["all_group_chats", "all_private_chats"]);
+
+  // every menu command gets an answer from the bot in its chat type
+  const { inGroup, inPrivate, during } = setup();
+  for (const command of published.all_group_chats) {
+    assert.ok((await during(() => inGroup(1, `/${command}`))).length > 0, `/${command} in a group`);
+  }
+  for (const command of published.all_private_chats) {
+    assert.ok((await during(() => inPrivate(1, `/${command}`))).length > 0, `/${command} in private`);
+  }
 });
 
 test("/start without a parameter and organizer commands in the group", async () => {

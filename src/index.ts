@@ -3,6 +3,7 @@ import { webhookCallback } from "grammy";
 import { FirestoreGameRepository } from "./repositories/firestoreGameRepository.js";
 import { GameService } from "./services/gameService.js";
 import { createBot } from "./telegram/bot.js";
+import { publishCommands } from "./telegram/commands.js";
 import { webhookSecret } from "./telegram/webhookSecret.js";
 
 const token = process.env.BOT_TOKEN?.trim();
@@ -10,6 +11,9 @@ if (!token) throw new Error("BOT_TOKEN is not set");
 
 const service = new GameService(new FirestoreGameRepository());
 const bot = createBot(token, service);
+
+// Keep the command menu in sync with the deployed code. A failure here must not stop the bot.
+publishCommands(bot.api).catch((e) => console.error("failed to publish the command menu", e));
 
 if (process.env.K_SERVICE) {
   // Cloud Run: receive updates via webhook.

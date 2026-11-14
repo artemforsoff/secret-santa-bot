@@ -30,7 +30,7 @@ The bot works in any number of groups; each group has its own independent game.
 ```
 src/
   index.ts                        — entry point: webhook on Cloud Run, polling locally
-  setWebhook.ts                   — script that sets the webhook and the command menu
+  setWebhook.ts                   — one-time script that sets the webhook
   domain/
     types.ts                      — Game, Participant, UserProfile
     draw.ts                       — the draw algorithm (a single cycle)
@@ -43,6 +43,7 @@ src/
   telegram/
     bot.ts                        — bot assembly
     callbackData.ts               — inline button data
+    commands.ts                   — the command menu, published on startup
     render.ts                     — showing screens and refreshing the group cards
     controllers/
       groupController.ts          — /santa and /list in the group
@@ -60,7 +61,9 @@ the result. The service knows the game rules and nothing about Telegram. The rep
 Push to `main`. The [deploy workflow](.github/workflows/deploy.yml) runs the tests, builds the image
 and rolls it out to Cloud Run; see the workflow for details. If the tests fail, nothing is deployed.
 
-After changing the list of bot commands, update the bot's menu:
+The bot publishes its command menu to Telegram on startup, so the menu follows the deployed code.
+
+The webhook is set once per service URL:
 
 ```powershell
 $env:BOT_TOKEN = Read-Host "Bot token"; npm run build; npm run webhook -- https://SERVICE_URL
