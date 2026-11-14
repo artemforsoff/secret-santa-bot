@@ -12,6 +12,45 @@
 
 Организатор — тот, кто написал `/santa`. Все дарят по одному кольцу, поэтому взаимных пар не бывает.
 
+## Структура кода
+
+```
+src/
+  index.ts                        — запуск: вебхук на Cloud Run или polling локально
+  setWebhook.ts                   — скрипт подключения вебхука и меню команд
+  domain/
+    types.ts                      — Game, Participant
+    draw.ts                       — алгоритм жеребьёвки (одно кольцо)
+  repositories/
+    gameRepository.ts             — интерфейс хранилища
+    firestoreGameRepository.ts    — Firestore
+    inMemoryGameRepository.ts     — память, для тестов
+  services/
+    gameService.ts                — правила игры, без Telegram
+  telegram/
+    bot.ts                        — сборка бота
+    callbackData.ts               — данные инлайн-кнопок
+    render.ts                     — показ экранов и обновление карточки в беседе
+    controllers/
+      groupController.ts          — /santa в беседе
+      participantController.ts    — /start, /me
+      organizerController.ts      — /pair, /pairs, /draw и их кнопки
+    views/                        — тексты и клавиатуры
+```
+
+Контроллер разбирает команду или кнопку, вызывает сервис и по его результату выбирает,
+что показать. Сервис знает правила игры и ничего не знает про Telegram. Репозиторий только хранит данные.
+
+## Автодеплой
+
+Пуш в `main` запускает [.github/workflows/deploy.yml](.github/workflows/deploy.yml):
+тесты, сборка образа, выкладка в Cloud Run. Если тесты падают, деплоя не будет.
+
+GitHub входит в GCP без ключей, через Workload Identity Federation. Параметры лежат
+в переменных репозитория: `GCP_PROJECT_ID`, `GCP_WORKLOAD_IDENTITY_PROVIDER`, `GCP_DEPLOY_SERVICE_ACCOUNT`.
+
+Ниже — ручная настройка проекта с нуля.
+
 ## Деплой в GCP
 
 Замени `PROJECT_ID` на id своего проекта. Регион в примерах — `europe-west1`.
@@ -98,7 +137,8 @@ $env:BOT_TOKEN = Read-Host "Bot token"; $env:GOOGLE_CLOUD_PROJECT = "PROJECT_ID"
 npm test
 ```
 
-Проверяют алгоритм жеребьёвки: одно кольцо, никто не дарит себе и своей паре.
+Проверяют алгоритм жеребьёвки, правила игры в сервисе и сквозной сценарий через контроллеры
+(апдейты Telegram подаются напрямую, данные в памяти). Сеть и Firestore для тестов не нужны.
 
 ## Данные
 

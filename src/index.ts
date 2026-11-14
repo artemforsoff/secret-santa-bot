@@ -1,11 +1,15 @@
 import { createServer } from "node:http";
 import { webhookCallback } from "grammy";
-import { createBot, webhookSecret } from "./bot.js";
+import { FirestoreGameRepository } from "./repositories/firestoreGameRepository.js";
+import { GameService } from "./services/gameService.js";
+import { createBot } from "./telegram/bot.js";
+import { webhookSecret } from "./telegram/webhookSecret.js";
 
-const token = process.env.BOT_TOKEN;
+const token = process.env.BOT_TOKEN?.trim();
 if (!token) throw new Error("BOT_TOKEN is not set");
 
-const bot = createBot(token);
+const service = new GameService(new FirestoreGameRepository());
+const bot = createBot(token, service);
 
 if (process.env.K_SERVICE) {
   // Cloud Run: принимаем апдейты через вебхук.

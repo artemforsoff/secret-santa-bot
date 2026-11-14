@@ -10,7 +10,7 @@
     "build": "tsc",
     "start": "node dist/index.js",
     "dev": "tsc && node dist/index.js",
-    "test": "tsc && node --test dist/draw.test.js",
+    "test": "tsc && node --test \"dist/**/*.test.js\"",
     "webhook": "node dist/setWebhook.js"
   },
   "dependencies": {

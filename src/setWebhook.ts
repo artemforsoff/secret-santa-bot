@@ -1,8 +1,8 @@
 // Использование: BOT_TOKEN=... node dist/setWebhook.js https://<адрес сервиса Cloud Run>
 import { Api } from "grammy";
-import { webhookSecret } from "./bot.js";
+import { webhookSecret } from "./telegram/webhookSecret.js";
 
-const token = process.env.BOT_TOKEN;
+const token = process.env.BOT_TOKEN?.trim();
 const base = process.argv[2]?.replace(/\/+$/, "");
 if (!token || !base) {
   console.error("Нужны переменная BOT_TOKEN и адрес сервиса первым аргументом.");
