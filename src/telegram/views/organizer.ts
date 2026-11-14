@@ -1,6 +1,6 @@
 import { InlineKeyboard } from "grammy";
 import type { Game, Participant } from "../../domain/types.js";
-import type { DrawSummary, Pair } from "../../services/gameService.js";
+import type { DrawSummary, Pair } from "../../services/dto/index.js";
 import { cb } from "../callbackData.js";
 import { esc, label } from "./format.js";
 import { messages } from "./messages.js";

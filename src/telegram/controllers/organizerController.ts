@@ -1,6 +1,7 @@
 import type { Api, Bot, Context } from "grammy";
 import type { Game, Participant } from "../../domain/types.js";
-import type { Assignment, GameService } from "../../services/gameService.js";
+import type { Assignment } from "../../services/dto/index.js";
+import type { GameService } from "../../services/gameService.js";
 import { cb, parseCallback } from "../callbackData.js";
 import { refreshCard, show } from "../render.js";
 import { openBotKeyboard } from "../views/card.js";

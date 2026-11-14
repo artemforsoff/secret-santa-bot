@@ -1,5 +1,5 @@
 import type { Game, Participant } from "../../domain/types.js";
-import type { DrawFailure } from "../../services/gameService.js";
+import type { DrawFailure } from "../../services/dto/index.js";
 import { esc, label } from "./format.js";
 
 export const messages = {

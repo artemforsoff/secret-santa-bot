@@ -1,5 +1,6 @@
 import type { Bot, Context } from "grammy";
-import type { GameService, SaveWishlistResult } from "../../services/gameService.js";
+import type { SaveWishlistResult } from "../../services/dto/index.js";
+import type { GameService } from "../../services/gameService.js";
 import { HTML } from "../views/format.js";
 import { messages } from "../views/messages.js";
 

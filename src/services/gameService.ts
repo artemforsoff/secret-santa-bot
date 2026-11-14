@@ -1,6 +1,21 @@
 import { drawCycle } from "../domain/draw.js";
 import type { Game, Participant } from "../domain/types.js";
 import type { GameRepository } from "../repositories/gameRepository.js";
+import type {
+  Assignment,
+  DrawResult,
+  DrawSummary,
+  JoinInput,
+  JoinResult,
+  MyResult,
+  OrganizerAccess,
+  Pair,
+  PairCandidates,
+  SaveWishlistResult,
+  StartGameInput,
+  StartGameResult,
+  SubmitWishlistResult,
+} from "./dto/index.js";
 
 export const MIN_PARTICIPANTS = 3;
 const MAX_CARDS = 10;
@@ -11,68 +26,6 @@ const WISHLIST_PENDING_TTL_MS = 10 * 60 * 1000;
 /** All card messages of the game in the group, oldest first. */
 export function cardMessageIds(game: Game): number[] {
   return game.messageIds ?? (game.messageId ? [game.messageId] : []);
-}
-
-export interface StartGameInput {
-  chatId: number;
-  title: string;
-  userId: number;
-  userName: string;
-  /** Called only when deciding whether a non-organizer may start a new game. */
-  isChatAdmin: () => Promise<boolean>;
-}
-
-export type StartGameResult =
-  | { status: "ok"; game: Game; participants: Participant[] }
-  /** Another organizer's game is in progress. */
-  | { status: "owned_by_other"; game: Game }
-  /** The previous game is over, but only its organizer or a chat admin may start a new one. */
-  | { status: "not_allowed" };
-
-export type JoinResult =
-  | { status: "not_found" }
-  | { status: "joined"; game: Game }
-  | { status: "already_joined"; game: Game }
-  | { status: "closed"; game: Game };
-
-export type OrganizerAccess =
-  | { status: "forbidden" }
-  | { status: "drawn"; game: Game }
-  | { status: "ok"; game: Game };
-
-export type Pair = [Participant, Participant];
-
-export interface DrawSummary {
-  participants: number;
-  pairs: number;
-  enoughParticipants: boolean;
-}
-
-export interface Assignment {
-  giver: Participant;
-  recipient: Participant;
-  /** The recipient's wishlist at the time of the draw. */
-  wishlist: string | null;
-}
-
-export type SaveWishlistResult =
-  | { status: "saved"; wishlist: string }
-  | { status: "too_long"; max: number };
-
-export type SubmitWishlistResult = SaveWishlistResult | { status: "not_pending" };
-
-export type DrawFailure = "already_drawn" | "too_few" | "impossible";
-
-export type DrawResult =
-  | { status: "failed"; reason: DrawFailure }
-  | { status: "ok"; assignments: Assignment[] };
-
-export interface MyResult {
-  game: Game;
-  /** undefined until the draw has happened. */
-  recipient: Participant | undefined;
-  /** The recipient's current wishlist. */
-  wishlist: string | null;
 }
 
 /** Game rules. Knows nothing about Telegram or where the data is stored. */
@@ -131,7 +84,7 @@ export class GameService {
 
   async join(
     chatId: number,
-    user: { userId: number; name: string; username: string | null },
+    user: JoinInput,
   ): Promise<JoinResult> {
     return this.repo.transaction<JoinResult>(async (tx) => {
       const game = await tx.getGame(chatId);
@@ -235,7 +188,7 @@ export class GameService {
   async pairCandidates(
     chatId: number,
     firstId: number,
-  ): Promise<{ first: Participant; candidates: Participant[] } | undefined> {
+  ): Promise<PairCandidates | undefined> {
     const participants = await this.repo.getParticipants(chatId);
     const first = participants.find((p) => p.userId === firstId);
     if (!first || first.partnerId) return undefined;

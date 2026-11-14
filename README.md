@@ -40,6 +40,7 @@ src/
     inMemoryGameRepository.ts     — in memory, for tests
   services/
     gameService.ts                — game rules, no Telegram
+    dto/                          — inputs and results of the service methods
   telegram/
     bot.ts                        — bot assembly
     callbackData.ts               — inline button data
