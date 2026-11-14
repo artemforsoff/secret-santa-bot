@@ -182,6 +182,43 @@ test("организатор убирает участника через /remov
   assert.match(rejoin.payload.text, /Ты участвуешь/);
 });
 
+test("повторный /santa и /list: обновляются все карточки, а не только последняя", async () => {
+  const { inGroup, inPrivate, press, during, buttons } = setup();
+  const [empty] = await during(() => inGroup(2, "/list"));
+  assert.match(empty.payload.text, /игра ещё не запущена/);
+
+  await inGroup(1, "/santa"); // карточка 1
+  await inPrivate(1, "/start j-100");
+  await inGroup(1, "/santa"); // карточка 2, игра та же
+
+  // /list доступен любому участнику беседы и выкладывает карточку 3
+  const listCalls = await during(() => inGroup(2, "/list"));
+  const posted = listCalls.at(-1)!;
+  assert.equal(posted.method, "sendMessage");
+  assert.match(posted.payload.text, /Участвуют \(1\)/);
+  assert.deepEqual(buttons(posted), ["https://t.me/santa_bot?start=j-100"]);
+
+  const editedCards = (calls: { method: string; payload: any }[]) =>
+    calls
+      .filter((c) => c.method === "editMessageText" && c.payload.chat_id === GROUP.id)
+      .map((c) => c.payload.message_id)
+      .sort((a, b) => a - b);
+
+  // запись нового участника обновляет все три карточки
+  const joinCalls = await during(() => inPrivate(2, "/start j-100"));
+  const cards = editedCards(joinCalls);
+  assert.equal(cards.length, 3);
+  assert.equal(new Set(cards).size, 3);
+  for (const c of joinCalls.filter((c) => c.method === "editMessageText")) {
+    assert.match(c.payload.text, /Участвуют \(2\)/);
+  }
+
+  // удаление участника тоже
+  await inPrivate(3, "/start j-100");
+  const removeCalls = await during(() => press(1, "x:-100:3"));
+  assert.deepEqual(editedCards(removeCalls), cards);
+});
+
 test("/start без параметра и команды организатора в беседе", async () => {
   const { inGroup, inPrivate, during } = setup();
   const [help] = await during(() => inPrivate(1, "/start"));

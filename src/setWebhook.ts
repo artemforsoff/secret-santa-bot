@@ -14,9 +14,13 @@ await api.setWebhook(`${base}/webhook`, {
   secret_token: webhookSecret(token),
   allowed_updates: ["message", "callback_query"],
 });
-await api.setMyCommands([{ command: "santa", description: "Начать Тайного Санту в этой беседе" }], {
-  scope: { type: "all_group_chats" },
-});
+await api.setMyCommands(
+  [
+    { command: "santa", description: "Начать Тайного Санту в этой беседе" },
+    { command: "list", description: "Показать список участников" },
+  ],
+  { scope: { type: "all_group_chats" } },
+);
 await api.setMyCommands(
   [
     { command: "me", description: "Кому я дарю подарок" },

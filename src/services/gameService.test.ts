@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { InMemoryGameRepository } from "../repositories/inMemoryGameRepository.js";
-import { GameService } from "./gameService.js";
+import { GameService, cardMessageIds } from "./gameService.js";
 
 const CHAT = -100;
 const OWNER = 1;
@@ -72,6 +72,24 @@ test("пары: добавление, отказ для занятых, удал
   await service.removePair(CHAT, 2);
   assert.equal((await service.listPairs(CHAT)).length, 0);
   assert.equal((await service.freeParticipants(CHAT)).length, 4);
+});
+
+test("карточки: помним все, старая игра с одним messageId дополняется", async () => {
+  const { service, start } = setup();
+  await start();
+  assert.deepEqual(cardMessageIds((await service.getGameWithParticipants(CHAT))!.game), []);
+  await service.addCardMessage(CHAT, 10);
+  await service.addCardMessage(CHAT, 20);
+  const game = (await service.getGameWithParticipants(CHAT))!.game;
+  assert.equal(game.messageId, 20);
+  assert.deepEqual(cardMessageIds(game), [10, 20]);
+
+  // игра, созданная до появления messageIds
+  const repo = new InMemoryGameRepository();
+  await repo.replaceGame({ chatId: CHAT, title: "t", ownerId: 1, ownerName: "o", messageId: 34, drawn: false });
+  const legacy = new GameService(repo);
+  await legacy.addCardMessage(CHAT, 82);
+  assert.deepEqual(cardMessageIds((await repo.getGame(CHAT))!), [34, 82]);
 });
 
 test("удаление участника: пара расформировывается, можно записаться заново", async () => {

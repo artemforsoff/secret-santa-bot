@@ -3,6 +3,12 @@ import type { Game, Participant } from "../domain/types.js";
 import type { GameRepository } from "../repositories/gameRepository.js";
 
 export const MIN_PARTICIPANTS = 3;
+const MAX_CARDS = 10;
+
+/** Все сообщения-карточки игры в беседе, от старых к новым. */
+export function cardMessageIds(game: Game): number[] {
+  return game.messageIds ?? (game.messageId ? [game.messageId] : []);
+}
 
 export interface StartGameInput {
   chatId: number;
@@ -79,6 +85,7 @@ export class GameService {
         ownerId: input.userId,
         ownerName: input.userName,
         messageId: null,
+        messageIds: [],
         drawn: false,
       };
       await this.repo.replaceGame(game);
@@ -86,8 +93,14 @@ export class GameService {
     return { status: "ok", game, participants: await this.repo.getParticipants(input.chatId) };
   }
 
-  async setCardMessage(chatId: number, messageId: number): Promise<void> {
-    await this.repo.updateGame(chatId, { messageId });
+  /** Запоминает новую карточку игры; помним последние MAX_CARDS. */
+  async addCardMessage(chatId: number, messageId: number): Promise<void> {
+    await this.repo.transaction(async (tx) => {
+      const game = await tx.getGame(chatId);
+      if (!game) return;
+      const messageIds = [...cardMessageIds(game), messageId].slice(-MAX_CARDS);
+      tx.updateGame(chatId, { messageId, messageIds });
+    });
   }
 
   async getGameWithParticipants(

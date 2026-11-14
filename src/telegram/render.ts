@@ -1,5 +1,5 @@
 import { Api, Context, GrammyError } from "grammy";
-import type { GameService } from "../services/gameService.js";
+import { cardMessageIds, type GameService } from "../services/gameService.js";
 import { cardKeyboard, cardText } from "./views/card.js";
 import { HTML } from "./views/format.js";
 import type { Screen } from "./views/organizer.js";
@@ -22,7 +22,10 @@ export async function show(ctx: Context, screen: Screen): Promise<void> {
   }
 }
 
-/** Обновляет карточку игры в беседе после изменения состава или жеребьёвки. */
+/**
+ * Обновляет все карточки игры в беседе после изменения состава или жеребьёвки.
+ * Карточек может быть несколько: каждый /santa и /list выкладывает новую.
+ */
 export async function refreshCard(
   api: Api,
   botUsername: string,
@@ -30,13 +33,17 @@ export async function refreshCard(
   chatId: number,
 ): Promise<void> {
   const data = await service.getGameWithParticipants(chatId);
-  if (!data?.game.messageId) return;
-  try {
-    await api.editMessageText(chatId, data.game.messageId, cardText(data.game, data.participants), {
-      ...HTML,
-      reply_markup: cardKeyboard(data.game, botUsername),
-    });
-  } catch (e) {
-    if (!notModified(e)) console.error("refreshCard failed", e);
-  }
+  if (!data) return;
+  const text = cardText(data.game, data.participants);
+  const options = { ...HTML, reply_markup: cardKeyboard(data.game, botUsername) };
+  await Promise.all(
+    cardMessageIds(data.game).map(async (messageId) => {
+      try {
+        await api.editMessageText(chatId, messageId, text, options);
+      } catch (e) {
+        // Карточку могли удалить из беседы — остальные всё равно обновляем.
+        if (!notModified(e)) console.error(`refreshCard failed for message ${messageId}`, e);
+      }
+    }),
+  );
 }
